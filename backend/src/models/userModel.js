@@ -76,14 +76,14 @@ async function createPlayer({ firstName, lastName, email, birthdate, password })
       empty,
       password,
       birthdate,
-      null, 
-      empty,
-      null, 
-      null,
-      null, 
       null,
       empty,
-      null, 
+      null,
+      null,
+      null,
+      null,
+      empty,
+      null,
       empty,
       email,
       empty,
@@ -150,28 +150,72 @@ async function createGooglePlayer({ googleId, email, firstName, lastName }) {
       firstName,
       lastName,
       empty,
-      null, 
-      null, 
-      null, 
-      empty, 
-      null, 
-      null, 
-      null, 
-      null, 
-      empty, 
-      null, 
-      empty, 
+      null,
+      null,
+      null,
+      empty,
+      null,
+      null,
+      null,
+      null,
+      empty,
+      null,
+      empty,
       email,
       googleId,
-      empty, 
-      1, 
-      0, 
-      empty, 
-      empty, 
+      empty,
+      1,
+      0,
+      empty,
+      empty,
     ]
   );
 
   return result;
+}
+
+async function savePasswordResetToken(email, token) {
+  // First, delete any existing tokens for this email to avoid duplicates
+  await pool.execute('DELETE FROM password_resets WHERE email = ?', [email]);
+
+  const [result] = await pool.execute(
+    'INSERT INTO password_resets (email, token, created_at) VALUES (?, ?, NOW())',
+    [email, token]
+  );
+  return result;
+}
+
+async function findResetToken(email, token) {
+  const [rows] = await pool.execute(
+    'SELECT email, token, created_at FROM password_resets WHERE email = ? AND token = ? LIMIT 1',
+    [email, token]
+  );
+  if (!rows || rows.length === 0) return null;
+  return rows[0];
+}
+
+async function deleteResetToken(email) {
+  const [result] = await pool.execute(
+    'DELETE FROM password_resets WHERE email = ?',
+    [email]
+  );
+  return result;
+}
+
+async function updatePlayerPassword(email, hashedPassword) {
+  // Update in players table
+  const [resultPlayers] = await pool.execute(
+    'UPDATE players SET password = ?, updated_at = NOW() WHERE email = ?',
+    [hashedPassword, email]
+  );
+
+  // Also update in users table if exists (for compatibility)
+  await pool.execute(
+    'UPDATE users SET password = ? WHERE email = ?',
+    [hashedPassword, email]
+  );
+
+  return resultPlayers;
 }
 
 module.exports = {
@@ -181,4 +225,8 @@ module.exports = {
   createPlayer,
   findPlayerByGoogleId,
   createGooglePlayer,
+  savePasswordResetToken,
+  findResetToken,
+  deleteResetToken,
+  updatePlayerPassword,
 };

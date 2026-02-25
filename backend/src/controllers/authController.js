@@ -4,6 +4,10 @@ const {
   findPlayerByNameAndBirthdate,
   findPlayerByEmail,
   createPlayer,
+  savePasswordResetToken,
+  findResetToken,
+  deleteResetToken,
+  updatePlayerPassword,
 } = require('../models/userModel');
 
 async function login(req, res, next) {
@@ -157,4 +161,87 @@ async function register(req, res, next) {
   }
 }
 
-module.exports = { login, register };
+async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body ?? {};
+    if (!email) {
+      return res.status(400).json({ ok: false, message: 'Email is required.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check if user exists in either table
+    let user = await findPlayerByEmail(normalizedEmail);
+    if (!user) {
+      user = await findUserByEmail(normalizedEmail);
+    }
+
+    if (!user) {
+      // For security, don't reveal if email exists, but here we might want to be helpful
+      return res.status(404).json({ ok: false, message: 'Email not found.' });
+    }
+
+    // Generate a simple 6-digit token for this demo/app
+    const token = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await savePasswordResetToken(normalizedEmail, token);
+
+    // In a real app, you'd send an email here.
+    // For now, we'll return it in the response so the user can see it (for development).
+    console.log(`[FORGOT PASSWORD] Generated token for ${normalizedEmail}: ${token}`);
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Password reset token generated.',
+      token: token // REMOVE THIS IN PRODUCTION
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function resetPassword(req, res, next) {
+  try {
+    const { email, token, newPassword } = req.body ?? {};
+    if (!email || !token || !newPassword) {
+      return res.status(400).json({ ok: false, message: 'Email, token, and new password are required.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Verify token
+    const resetEntry = await findResetToken(normalizedEmail, token);
+    if (!resetEntry) {
+      return res.status(400).json({ ok: false, message: 'Invalid or expired token.' });
+    }
+
+    // Check token expiry (e.g., 1 hour)
+    const createdAt = new Date(resetEntry.created_at);
+    const now = new Date();
+    const diffHours = (now - createdAt) / (1000 * 60 * 60);
+    if (diffHours > 1) {
+      await deleteResetToken(normalizedEmail);
+      return res.status(400).json({ ok: false, message: 'Token has expired.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ ok: false, message: 'Password must be at least 6 characters.' });
+    }
+
+    // Hash and update password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await updatePlayerPassword(normalizedEmail, hashedPassword);
+
+    // Delete token after successful use
+    await deleteResetToken(normalizedEmail);
+
+    return res.status(200).json({
+      ok: true,
+      message: 'Password has been reset successfully.'
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = { login, register, forgotPassword, resetPassword };

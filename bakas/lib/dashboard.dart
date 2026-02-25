@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dashboardf/cash_inout.dart';
+import 'dashboardf/messagecenter.dart';
+import 'dashboardf/history.dart';
+import 'dashboardf/grouprequest.dart';
+import 'dashboardf/app_drawer.dart';
 
 void main() {
   runApp(const MyApp());
@@ -110,7 +114,7 @@ class _DashboardUIState extends State<DashboardUI> {
           gradient: LinearGradient(
             colors: [
               Color(0xFF8B0000),
-              Color(0xFF6E0000),
+              Color.fromARGB(255, 244, 51, 51),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -128,24 +132,28 @@ class _DashboardUIState extends State<DashboardUI> {
                   builder: (context) => Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.menu, color: Colors.white),
-                        onPressed: () async {
-                          Scaffold.of(context).openDrawer();
-                        },
+                    IconButton(
+                      icon: const Icon(Icons.menu, color: Colors.white),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                    ),
+
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1,
+                        ),
                       ),
-                      // Notifications + credits chip
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.notifications_none,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 10),
-                      
-                        ],
+                      child: const Icon(
+                        Icons.notifications_none,
+                        color: Colors.white,
+                        size: 22,
                       ),
-                    ],
+                    ),
+                  ],
                   ),
                 ),
               ),
@@ -155,7 +163,7 @@ class _DashboardUIState extends State<DashboardUI> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  "Hi, $displayName",
+                  "Hello, $displayName!",
                   style: const TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.bold,
@@ -164,13 +172,34 @@ class _DashboardUIState extends State<DashboardUI> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _SummaryTile(
-                  icon: Icons.account_balance_wallet_outlined,
-                  label: 'Total Balance',
-                  value: _isLoading ? 'Loading...' : 'Php ${_balance.toStringAsFixed(2)}',
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.account_balance_wallet_outlined,
+                      color: Colors.white70,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      "Balance:",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _isLoading ? "Loading..." : "Php ${_balance.toStringAsFixed(2)}",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -189,18 +218,45 @@ class _DashboardUIState extends State<DashboardUI> {
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: const [
+                    children: [
                       DashboardButton(
                         icon: Icons.sports_esports_outlined,
                         label: "Bakas",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SimplePage("Bakas"),
+                            ),
+                          );
+                        },
                       ),
                       DashboardButton(
                         icon: Icons.confirmation_num_outlined,
                         label: "Tickets",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SimplePage("Tickets"),
+                            ),
+                          );
+                        },
                       ),
                       DashboardButton(
                         icon: Icons.access_time_outlined,
                         label: "History",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => HistoryUI(
+                                playerId: widget.playerId,
+                                firstName: displayName,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -217,25 +273,30 @@ class _DashboardUIState extends State<DashboardUI> {
 class DashboardButton extends StatelessWidget {
   final IconData icon;
   final String label;
+  final VoidCallback onTap;
 
   const DashboardButton({
     super.key,
     required this.icon,
     required this.label,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          width: 85,
-          height: 85,
-          decoration: BoxDecoration(
-            color: const Color(0xFF8B0000),
-            borderRadius: BorderRadius.circular(22),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: 85,
+            height: 85,
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B0000),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Icon(icon, color: Colors.white, size: 34),
           ),
-          child: Icon(icon, color: Colors.white, size: 34),
         ),
         const SizedBox(height: 10),
         Text(
@@ -250,102 +311,6 @@ class DashboardButton extends StatelessWidget {
   }
 }
 
-class AppDrawer extends StatelessWidget {
-  final String? firstName;
-  final int? playerId;
-  final VoidCallback? onRefresh;
-  
-  const AppDrawer({super.key, this.firstName, this.playerId, this.onRefresh});
-
-  @override
-  Widget build(BuildContext context) {
-    // Get firstName from route arguments if not provided directly
-    final userFirstName = firstName ?? 
-        (ModalRoute.of(context)?.settings.arguments as String?);
-    final displayName = userFirstName ?? 'User';
-    
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: const BoxDecoration(
-              color: Color(0xFF8B0000),
-            ),
-            child: Text(
-              displayName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-              ),
-            ),
-          ),
-
-          drawerItem(context, Icons.home, "Home", DashboardUI(firstName: displayName, playerId: playerId), isHome: true),
-          drawerItem(context, Icons.sports_esports, "Bakas", const SimplePage("Bakas")),
-          drawerItem(context, Icons.account_balance_wallet,
-              "Cash In / Cash Out", CashInOutPage(playerId: playerId, firstName: displayName)),
-          drawerItem(context, Icons.confirmation_num, "Tickets",
-              const SimplePage("Tickets")),
-          drawerItem(context, Icons.history, "History",
-              const SimplePage("History")),
-          drawerItem(context, Icons.message, "Message Center",
-              const SimplePage("Message Center")),
-          drawerItem(context, Icons.group, "Groups",
-              const SimplePage("Groups")),
-          drawerItem(context, Icons.settings, "Settings",
-              const SimplePage("Settings")),
-
-          const Divider(),
-
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text("Sign Out"),
-            onTap: () {
-              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget drawerItem(
-      BuildContext context, IconData icon, String title, Widget page, {bool isHome = false}) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      onTap: () async {
-        Navigator.pop(context); // Close drawer
-        
-        if (isHome) {
-          // If we are already on Dashboard, just close drawer.
-          // Otherwise, go back to dashboard.
-          if (ModalRoute.of(context)?.settings.name == '/dashboard') {
-            return;
-          }
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (context) => page,
-              settings: const RouteSettings(name: '/dashboard'),
-            ),
-            (route) => false,
-          );
-        } else {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => page),
-          );
-          // When returning from any page (like Cash In/Out), refresh the balance if we are on Dashboard
-          if (onRefresh != null) {
-            onRefresh!();
-          }
-        }
-      },
-    );
-  }
-}
 
 class SimplePage extends StatelessWidget {
   final String title;
@@ -372,46 +337,3 @@ class SimplePage extends StatelessWidget {
   }
 }
 
-class _SummaryTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _SummaryTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: Colors.white, size: 16),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
-    );
-  }
-}

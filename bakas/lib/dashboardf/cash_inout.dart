@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../dashboard.dart';
+import 'app_drawer.dart';
 
 class CashInOutPage extends StatefulWidget {
   final int? playerId;
@@ -64,8 +65,17 @@ class _CashInOutPageState extends State<CashInOutPage> {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {
           setState(() {
-            _balance = (payload['data']['balance'] as num).toDouble();
-            _cashInLimit = (payload['data']['cashInLimit'] as num).toDouble();
+            final dynamic balanceData = payload['data']['balance'];
+            final dynamic limitData = payload['data']['cashInLimit'];
+            
+            _balance = (balanceData is String) 
+                ? double.tryParse(balanceData) ?? 0.0 
+                : (balanceData as num).toDouble();
+                
+            _cashInLimit = (limitData is String) 
+                ? double.tryParse(limitData) ?? 0.0 
+                : (limitData as num).toDouble();
+                
             _isStatsLoading = false;
           });
           return;
@@ -189,7 +199,10 @@ class _CashInOutPageState extends State<CashInOutPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      drawer: AppDrawer(playerId: widget.playerId, firstName: widget.firstName, onRefresh: _fetchWalletStats),
+      drawer: AppDrawer(
+          playerId: widget.playerId,
+          firstName: widget.firstName,
+          onRefresh: _fetchWalletStats),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(

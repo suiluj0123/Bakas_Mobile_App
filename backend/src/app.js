@@ -3,6 +3,7 @@ const cors = require('cors');
 
 const authRoutes = require('./routes/authRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const historyRoutes = require('./routes/historyRoutes');
 
 function createApp() {
   const app = express();
@@ -16,6 +17,7 @@ function createApp() {
 
   app.use(authRoutes);
   app.use(paymentRoutes);
+  app.use(historyRoutes);
 
   app.use((_req, res) => {
     res.status(404).json({ ok: false, message: 'Not found' });

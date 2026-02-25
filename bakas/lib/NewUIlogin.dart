@@ -7,6 +7,7 @@ import 'package:flutter/gestures.dart';
 import 'package:http/http.dart' as http;
 import 'dashboard.dart';
 import 'services/google_auth_service.dart';
+import 'ForgetPassword.dart';
 
 class GlassLoginUI extends StatelessWidget {
   const GlassLoginUI({super.key});
@@ -188,11 +189,25 @@ class _GlassLoginScreenState extends State<_GlassLoginScreen> {
                       controller: _passwordController,
                     ),
                     const SizedBox(height: 14),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        "Forgot password?",
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ForgetPasswordUI(),
+                          ),
+                        );
+                      },
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          "Forgot password?",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
                     ),
                     if (_errorText != null) ...[
