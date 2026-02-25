@@ -99,10 +99,6 @@ class _HistoryUIState extends State<HistoryUI> {
                     icon: const Icon(Icons.menu, color: Colors.white),
                     onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                   ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.arrow_back, color: Colors.white),
-                  ),
                   const Text(
                     "History",
                     style: TextStyle(
