@@ -32,11 +32,9 @@ async function login(req, res, next) {
         .json({ ok: false, message: 'Password is required.' });
     }
 
-    // Check players table first (where registration creates accounts)
     let user = await findPlayerByEmail(normalizedEmail);
     let source = 'players';
 
-    // If not found in players, check users table (for backward compatibility)
     if (!user) {
       user = await findUserByEmail(normalizedEmail);
       source = 'users';
@@ -58,10 +56,8 @@ async function login(req, res, next) {
         .json({ ok: false, message: 'Invalid credentials.' });
     }
 
-    // Extract first_name - for players table it exists, for users table extract from name
     let firstName = user.first_name;
     if (!firstName && user.name) {
-      // If from users table, extract first name from name field
       firstName = user.name.split(' ')[0];
     }
 
@@ -80,7 +76,6 @@ async function login(req, res, next) {
   }
 }
 
-// NEW: register a player into `players` table
 async function register(req, res, next) {
   try {
     const {
@@ -120,7 +115,6 @@ async function register(req, res, next) {
       });
     }
 
-    // Check duplicates by email
     const existingByEmail = await findPlayerByEmail(rawEmail);
     if (existingByEmail) {
       return res
@@ -128,7 +122,6 @@ async function register(req, res, next) {
         .json({ ok: false, message: 'Email is already registered.' });
     }
 
-    // Optional: also prevent duplicates by name + birthdate
     const existingByNameDob = await findPlayerByNameAndBirthdate(
       firstName,
       lastName,
@@ -170,30 +163,25 @@ async function forgotPassword(req, res, next) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check if user exists in either table
     let user = await findPlayerByEmail(normalizedEmail);
     if (!user) {
       user = await findUserByEmail(normalizedEmail);
     }
 
     if (!user) {
-      // For security, don't reveal if email exists, but here we might want to be helpful
       return res.status(404).json({ ok: false, message: 'Email not found.' });
     }
 
-    // Generate a simple 6-digit token for this demo/app
     const token = Math.floor(100000 + Math.random() * 900000).toString();
 
     await savePasswordResetToken(normalizedEmail, token);
 
-    // In a real app, you'd send an email here.
-    // For now, we'll return it in the response so the user can see it (for development).
     console.log(`[FORGOT PASSWORD] Generated token for ${normalizedEmail}: ${token}`);
 
     return res.status(200).json({
       ok: true,
       message: 'Password reset token generated.',
-      token: token // REMOVE THIS IN PRODUCTION
+      token: token
     });
   } catch (err) {
     return next(err);

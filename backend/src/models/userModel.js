@@ -175,7 +175,6 @@ async function createGooglePlayer({ googleId, email, firstName, lastName }) {
 }
 
 async function savePasswordResetToken(email, token) {
-  // First, delete any existing tokens for this email to avoid duplicates
   await pool.execute('DELETE FROM password_resets WHERE email = ?', [email]);
 
   const [result] = await pool.execute(
@@ -203,13 +202,11 @@ async function deleteResetToken(email) {
 }
 
 async function updatePlayerPassword(email, hashedPassword) {
-  // Update in players table
   const [resultPlayers] = await pool.execute(
     'UPDATE players SET password = ?, updated_at = NOW() WHERE email = ?',
     [hashedPassword, email]
   );
 
-  // Also update in users table if exists (for compatibility)
   await pool.execute(
     'UPDATE users SET password = ? WHERE email = ?',
     [hashedPassword, email]

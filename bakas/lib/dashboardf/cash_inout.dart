@@ -22,8 +22,8 @@ class _CashInOutPageState extends State<CashInOutPage> {
 
   CashState _currentState = CashState.main;
   bool _isCashIn = true;
-  String? _selectedMethod; // 'card', 'wallet'
-  String? _selectedProvider; // 'gcash', 'maya'
+  String? _selectedMethod; 
+  String? _selectedProvider; 
 
   final _amountController = TextEditingController();
   final _cardNumberController = TextEditingController();

@@ -1,7 +1,7 @@
 const historyModel = require('../models/historyModel');
 
 /**
- * Fetch player transaction history
+ *
  */
 async function getPlayerHistory(req, res) {
   try {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'history.dart';
 import 'cash_inout.dart';
+import 'messagecenter.dart';
 
 class AppDrawer extends StatelessWidget {
   final String? firstName;
@@ -185,6 +186,16 @@ class AppDrawer extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => CashInOutPage(
+                      playerId: playerId,
+                      firstName: firstName,
+                    ),
+                  ),
+                );
+              } else if (route == '/message-center') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MessageCenterPage(
                       playerId: playerId,
                       firstName: firstName,
                     ),

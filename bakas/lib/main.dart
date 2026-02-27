@@ -43,7 +43,13 @@ class MyApp extends StatelessWidget {
           return CashInOutPage(firstName: firstName);
         },
         '/history': (context) => const HistoryUI(),
-        '/message-center': (context) => const MessageCenterPage(),
+        '/message-center': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          return MessageCenterPage(
+            playerId: args?['playerId'],
+            firstName: args?['firstName'],
+          );
+        },
         '/groups': (context) => const GroupsPage(),
         '/group-request': (context) => const GroupRequestPage(),
       },

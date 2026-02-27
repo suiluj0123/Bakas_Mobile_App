@@ -1,7 +1,6 @@
 const pool = require('../../db');
 
 /**
- * Get all transaction history for a specific player
  * @param {number} playerId 
  * @returns {Promise<Array>}
  */
@@ -30,7 +29,7 @@ async function getHistoryByPlayerId(playerId) {
 }
 
 /**
- * Get history details by transaction code
+ * 
  * @param {string} transactionCode 
  * @returns {Promise<Object|null>}
  */
