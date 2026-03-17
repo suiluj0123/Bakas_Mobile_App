@@ -5,6 +5,11 @@ const authRoutes = require('./routes/authRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const historyRoutes = require('./routes/historyRoutes');
 const messageCenterRoutes = require('./routes/messageCenterRoutes');
+const groupRoutes = require('./routes/groupRoutes');
+const lotteryRoutes = require('./routes/lotteryRoutes');
+const drawRoutes = require('./routes/drawRoutes');
+const betRoutes = require('./routes/betRoutes');
+const operatorRoutes = require('./routes/operatorRoutes');
 
 function createApp() {
   const app = express();
@@ -20,6 +25,11 @@ function createApp() {
   app.use(paymentRoutes);
   app.use(historyRoutes);
   app.use('/api/messages', messageCenterRoutes);
+  app.use('/api/groups', groupRoutes);
+  app.use('/api/lotteries', lotteryRoutes);
+  app.use('/api/draws', drawRoutes);
+  app.use('/api/bets', betRoutes);
+  app.use('/api/operators', operatorRoutes);
 
   app.use((_req, res) => {
     res.status(404).json({ ok: false, message: 'Not found' });

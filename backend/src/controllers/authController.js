@@ -9,6 +9,7 @@ const {
   deleteResetToken,
   updatePlayerPassword,
 } = require('../models/userModel');
+const { findOperatorByEmail } = require('../models/operatorModel');
 
 async function login(req, res, next) {
   try {
@@ -34,10 +35,22 @@ async function login(req, res, next) {
 
     let user = await findPlayerByEmail(normalizedEmail);
     let source = 'players';
+    let roleId = 1; 
+
+    if (!user) {
+      user = await findOperatorByEmail(normalizedEmail);
+      if (user) {
+        source = 'operators';
+        roleId = user.role_id || 2;
+      }
+    }
 
     if (!user) {
       user = await findUserByEmail(normalizedEmail);
-      source = 'users';
+      if (user) {
+        source = 'users';
+        roleId = 1;
+      }
     }
 
     if (!user) {
@@ -47,9 +60,13 @@ async function login(req, res, next) {
         .json({ ok: false, message: 'Invalid credentials.' });
     }
 
-    console.log(`[LOGIN] User ${normalizedEmail} found in [${source}] table with ID: ${user.id}`);
+    let matches = false;
+    if (user.password && user.password.startsWith('$2')) {
+        matches = await bcrypt.compare(password, user.password);
+    } else {
+        matches = (password === user.password);
+    }
 
-    const matches = await bcrypt.compare(password, user.password);
     if (!matches) {
       return res
         .status(401)
@@ -69,6 +86,7 @@ async function login(req, res, next) {
         first_name: firstName || null,
         last_name: user.last_name || null,
         email: user.email,
+        role_id: roleId,
       },
     });
   } catch (err) {
@@ -197,13 +215,11 @@ async function resetPassword(req, res, next) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Verify token
     const resetEntry = await findResetToken(normalizedEmail, token);
     if (!resetEntry) {
       return res.status(400).json({ ok: false, message: 'Invalid or expired token.' });
     }
 
-    // Check token expiry (e.g., 1 hour)
     const createdAt = new Date(resetEntry.created_at);
     const now = new Date();
     const diffHours = (now - createdAt) / (1000 * 60 * 60);
@@ -216,11 +232,9 @@ async function resetPassword(req, res, next) {
       return res.status(400).json({ ok: false, message: 'Password must be at least 6 characters.' });
     }
 
-    // Hash and update password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await updatePlayerPassword(normalizedEmail, hashedPassword);
 
-    // Delete token after successful use
     await deleteResetToken(normalizedEmail);
 
     return res.status(200).json({

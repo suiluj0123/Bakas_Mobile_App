@@ -1,5 +1,6 @@
 const http = require('http');
 const { createApp } = require('./app');
+const schedulerService = require('./services/schedulerService');
 
 function startServer() {
   const app = createApp();
@@ -8,6 +9,7 @@ function startServer() {
   const PORT = Number(process.env.PORT || 3000);
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`Backend running on http://0.0.0.0:${PORT}`);
+    schedulerService.startScheduler();
   });
 
   return server;

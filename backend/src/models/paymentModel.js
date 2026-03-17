@@ -66,7 +66,52 @@ async function createTransaction({ playerId, type, amount, fee, paymentMethod, p
   }
 }
 
+async function deductBalanceForBet({ playerId, amount, ticketCount }) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [[player]] = await connection.execute(
+      'SELECT credit FROM players WHERE id = ? FOR UPDATE',
+      [playerId]
+    );
+
+    if (!player) throw new Error('Player not found');
+
+    const totalDeduction = amount * ticketCount;
+    if (player.credit < totalDeduction) {
+      throw new Error('Insufficient balance');
+    }
+
+    const newBalance = player.credit - totalDeduction;
+    const transactionCode = `BET-${Date.now()}`;
+
+    // Record in history
+    await connection.execute(
+      `INSERT INTO histories 
+       (player_id, transaction_code, type, channel, amount, status, balance, created_at, updated_at) 
+       VALUES (?, ?, 'BET', 'WALLET', ?, 1, ?, NOW(), NOW())`,
+      [playerId, transactionCode, totalDeduction, newBalance]
+    );
+
+    // Update player balance
+    await connection.execute(
+      'UPDATE players SET credit = ? WHERE id = ?',
+      [newBalance, playerId]
+    );
+
+    await connection.commit();
+    return { success: true, newBalance };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 module.exports = {
   getPlayerWalletStats,
   createTransaction,
+  deductBalanceForBet,
 };

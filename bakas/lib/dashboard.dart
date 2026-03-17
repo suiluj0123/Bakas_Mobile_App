@@ -38,6 +38,7 @@ class DashboardUI extends StatefulWidget {
 class _DashboardUIState extends State<DashboardUI> {
   double _balance = 0.0;
   bool _isLoading = true;
+  bool _hasFetched = false;
 
   String _apiBaseUrl() {
     if (kIsWeb) return 'http://localhost:3001';
@@ -48,27 +49,43 @@ class _DashboardUIState extends State<DashboardUI> {
   @override
   void initState() {
     super.initState();
-    _fetchBalance();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasFetched) {
+      _fetchBalance();
+      _hasFetched = true;
+    }
   }
 
   Future<void> _fetchBalance() async {
-    if (widget.playerId == null) {
-      setState(() => _isLoading = false);
-      return;
-    }
-
     try {
+
+      final route = ModalRoute.of(context);
+      final args = route?.settings.arguments as Map<String, dynamic>?;
+      final effectivePlayerId = widget.playerId ?? args?['playerId'];
+
+      if (effectivePlayerId == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
       final res = await http.get(
-        Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=${widget.playerId}'),
+        Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=$effectivePlayerId'),
       );
 
       if (res.statusCode == 200) {
         final payload = (res.body.isNotEmpty ? (jsonDecode(res.body) as Map<String, dynamic>) : <String, dynamic>{});
         if (payload['ok'] == true) {
-          setState(() {
-            _balance = (payload['data']['balance'] as num).toDouble();
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              final bal = payload['data']['balance'];
+              _balance = (bal is String) ? (double.tryParse(bal) ?? 0.0) : (bal as num).toDouble();
+              _isLoading = false;
+            });
+          }
           return;
         } else {
           _showError(payload['message'] ?? 'Failed to fetch balance');
@@ -98,15 +115,17 @@ class _DashboardUIState extends State<DashboardUI> {
 
   @override
   Widget build(BuildContext context) {
-    final userFirstName = widget.firstName ?? 
-        (ModalRoute.of(context)?.settings.arguments as String?);
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final userFirstName = widget.firstName ?? args?['firstName'];
+    final userPlayerId = widget.playerId ?? args?['playerId'];
+    
     final displayName = (userFirstName != null && userFirstName.isNotEmpty) 
         ? userFirstName 
         : 'User';
     return Scaffold(
       drawer: AppDrawer(
         firstName: displayName, 
-        playerId: widget.playerId, 
+        playerId: userPlayerId, 
         onRefresh: _fetchBalance,
       ),
       body: Container(
@@ -223,39 +242,42 @@ class _DashboardUIState extends State<DashboardUI> {
                         icon: Icons.sports_esports_outlined,
                         label: "Bakas",
                         onTap: () {
-                          Navigator.push(
+                          Navigator.pushNamed(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => const SimplePage("Bakas"),
-                            ),
-                          );
+                            '/bakas',
+                            arguments: {
+                              'firstName': displayName,
+                              'playerId': userPlayerId,
+                            },
+                          ).then((_) => _fetchBalance());
                         },
                       ),
                       DashboardButton(
                         icon: Icons.confirmation_num_outlined,
                         label: "Tickets",
                         onTap: () {
-                          Navigator.push(
+                          Navigator.pushNamed(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => const SimplePage("Tickets"),
-                            ),
-                          );
+                            '/tickets',
+                            arguments: {
+                              'firstName': displayName,
+                              'playerId': userPlayerId,
+                            },
+                          ).then((_) => _fetchBalance());
                         },
                       ),
                       DashboardButton(
                         icon: Icons.access_time_outlined,
                         label: "History",
                         onTap: () {
-                          Navigator.push(
+                          Navigator.pushNamed(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => HistoryUI(
-                                playerId: widget.playerId,
-                                firstName: displayName,
-                              ),
-                            ),
-                          );
+                            '/history',
+                            arguments: {
+                              'firstName': displayName,
+                              'playerId': userPlayerId,
+                            },
+                          ).then((_) => _fetchBalance());
                         },
                       ),
                     ],

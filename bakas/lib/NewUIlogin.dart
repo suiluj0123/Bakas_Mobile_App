@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:http/http.dart' as http;
 import 'dashboard.dart';
+import 'operator/operator_dashboard.dart';
 import 'services/google_auth_service.dart';
 import 'ForgetPassword.dart';
 
@@ -59,17 +60,23 @@ class _GlassLoginScreenState extends State<_GlassLoginScreen> {
       final rawName = (userData['name'] ?? '') as String;
       final firstName = rawName.isNotEmpty ? rawName.split(' ').first : 'User';
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DashboardUI(
-            firstName: firstName,
-            playerId: userData['id'] as int?,
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DashboardUI(
+              firstName: firstName,
+              playerId: userData['id'] as int?,
+            ),
+            settings: RouteSettings(
+              name: '/dashboard', 
+              arguments: {
+                'firstName': firstName,
+                'playerId': userData['id'] as int?,
+              },
+            ),
           ),
-          settings: RouteSettings(name: '/dashboard', arguments: firstName),
-        ),
-        (route) => false,
-      );
+          (route) => false,
+        );
     } catch (error) {
       setState(() {
         _errorText = 'Google sign-in failed. ${error.toString()}';
@@ -106,17 +113,47 @@ class _GlassLoginScreenState extends State<_GlassLoginScreen> {
         final firstName =
             rawName.isNotEmpty ? rawName.split(' ').first : 'User';
 
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DashboardUI(
-              firstName: firstName,
-              playerId: userData?['id'] as int?,
+        final roleId = userData?['role_id'] ?? 1;
+
+        if (roleId > 1) {
+          // Operator Login
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OperatorDashboardUI(
+                operatorId: userData?['id'] as int?,
+                username: userData?['name'] as String?,
+              ),
+              settings: RouteSettings(
+                name: '/operator-dashboard',
+                arguments: {
+                  'operatorId': userData?['id'] as int?,
+                  'username': userData?['name'] as String?,
+                },
+              ),
             ),
-            settings: RouteSettings(name: '/dashboard', arguments: firstName),
-          ),
-          (route) => false,
-        );
+            (route) => false,
+          );
+        } else {
+          // Player Login
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DashboardUI(
+                firstName: firstName,
+                playerId: userData?['id'] as int?,
+              ),
+              settings: RouteSettings(
+                name: '/dashboard', 
+                arguments: {
+                  'firstName': firstName,
+                  'playerId': userData?['id'] as int?,
+                },
+              ),
+            ),
+            (route) => false,
+          );
+        }
         return;
       }
       setState(() {

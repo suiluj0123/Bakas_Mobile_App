@@ -14,7 +14,7 @@ async function getMessagesByPlayerId(playerId) {
       \`all\`, 
       \`read\`, 
       created_by, 
-      updated_by, 
+      updated_by,   
       created_at, 
       updated_at, 
       deleted_at 
@@ -52,8 +52,19 @@ async function deleteMessage(id) {
   return result.affectedRows > 0;
 }
 
+async function createMessage({ senderId, receiverId, subject, content, all = 0 }) {
+  const [result] = await pool.execute(
+    `INSERT INTO message_centers 
+      (player_id, message, \`all\`, \`read\`, created_by, updated_by, created_at, updated_at)
+     VALUES (?, ?, ?, 0, ?, ?, NOW(), NOW())`,
+    [receiverId, `${subject}: ${content}`, all, senderId, senderId]
+  );
+  return { id: result.insertId };
+}
+
 module.exports = {
   getMessagesByPlayerId,
   markMessageAsRead,
   deleteMessage,
+  createMessage,
 };

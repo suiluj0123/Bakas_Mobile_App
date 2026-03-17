@@ -1,14 +1,96 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'app_drawer.dart';
 
+class GroupRequestPage extends StatefulWidget {
+  final int? playerId;
+  final String? firstName;
 
-class GroupRequestPage extends StatelessWidget {
-  const GroupRequestPage({super.key});
+  const GroupRequestPage({Key? key, this.playerId, this.firstName}) : super(key: key);
+
+  @override
+  State<GroupRequestPage> createState() => _GroupRequestPageState();
+}
+
+class _GroupRequestPageState extends State<GroupRequestPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  List<dynamic> _invitations = [];
+  bool _isLoading = true;
+
+  String _apiBaseUrl() {
+    if (kIsWeb) return 'http://localhost:3001';
+    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
+    return 'http://localhost:3001';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchInvitations();
+  }
+
+  Future<void> _fetchInvitations() async {
+    if (widget.playerId == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+    try {
+      final res = await http.get(
+        Uri.parse('${_apiBaseUrl()}/api/groups/invitations/${widget.playerId}'),
+      );
+      if (res.statusCode == 200) {
+        final payload = jsonDecode(res.body);
+        if (payload['ok'] == true) {
+          if (mounted) {
+            setState(() {
+              _invitations = payload['data'] ?? [];
+              _isLoading = false;
+            });
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching invitations: $e');
+    }
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _respondToInvitation(int id, String status) async {
+    try {
+      final res = await http.put(
+        Uri.parse('${_apiBaseUrl()}/api/groups/invitations/$id/respond'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'status': status}),
+      );
+      if (res.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(status == 'active' ? 'Invitation accepted!' : 'Invitation declined'),
+              backgroundColor: status == 'active' ? Colors.green : Colors.grey,
+            ),
+          );
+        }
+        await _fetchInvitations();
+      }
+    } catch (e) {
+      debugPrint('Error responding to invitation: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const AppDrawer(),
+      key: _scaffoldKey,
+      drawer: AppDrawer(
+        playerId: widget.playerId,
+        firstName: widget.firstName,
+        onRefresh: _fetchInvitations,
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -20,43 +102,35 @@ class GroupRequestPage extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-         
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Builder(
-                  builder: (context) => Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.menu, color: Colors.white),
-                        onPressed: () {
-                        Scaffold.of(context).openDrawer();
-                        },
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.notifications_none,
-                          color: Colors.white,
-                          size: 22,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.menu, color: Colors.white),
+                      onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1,
                         ),
                       ),
-                    ],
-                  ),
+                      child: const Icon(
+                        Icons.notifications_none,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-
               const SizedBox(height: 10),
-
               const Text(
                 "Group Request",
                 style: TextStyle(
@@ -65,14 +139,11 @@ class GroupRequestPage extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-
               const SizedBox(height: 25),
-
               Expanded(
                 child: Container(
                   width: double.infinity,
-                  padding:
-                      const EdgeInsets.only(top: 30, left: 20, right: 20),
+                  padding: const EdgeInsets.only(top: 30, left: 20, right: 20),
                   decoration: const BoxDecoration(
                     color: Color(0xFFF3F3F3),
                     borderRadius: BorderRadius.only(
@@ -80,13 +151,22 @@ class GroupRequestPage extends StatelessWidget {
                       topRight: Radius.circular(40),
                     ),
                   ),
-                  child: ListView(
-                    children: const [
-                      RequestCard(),
-                      SizedBox(height: 20),
-                      
-                    ],
-                  ),
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _invitations.isEmpty
+                          ? const Center(
+                              child: Text("No pending invitations",
+                                  style: TextStyle(color: Colors.grey)))
+                          : ListView.builder(
+                              itemCount: _invitations.length,
+                              itemBuilder: (context, index) {
+                                final inv = _invitations[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 20),
+                                  child: _buildRequestCard(inv),
+                                );
+                              },
+                            ),
                 ),
               ),
             ],
@@ -95,13 +175,14 @@ class GroupRequestPage extends StatelessWidget {
       ),
     );
   }
-}
 
-class RequestCard extends StatelessWidget {
-  const RequestCard({super.key});
+  Widget _buildRequestCard(Map<String, dynamic> inv) {
+    final groupName = inv['group_name'] ?? inv['name'] ?? 'Unknown Group';
+    final dateStr = inv['created_at'] != null
+        ? inv['created_at'].toString().split('T')[0]
+        : '';
+    final invitedBy = inv['created_by']?.toString() ?? '';
 
-  @override
-  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -118,40 +199,53 @@ class RequestCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Menggay's Squad",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  groupName,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: inv['lotterytype_id'] == 2 ? Colors.blue.shade50 : Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  inv['lotterytype_id'] == 2 ? 'Private' : 'Public',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: inv['lotterytype_id'] == 2 ? Colors.blue : Colors.orange,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
-          const Text(
-            "Date Request: February 24, 2026",
-            style: TextStyle(fontSize: 13, color: Colors.black54),
+          Text(
+            "Date Request: $dateStr",
+            style: const TextStyle(fontSize: 13, color: Colors.black54),
           ),
           const SizedBox(height: 3),
-          const Text(
-            "Invited by: Jeraine Rae Gabuat",
-            style: TextStyle(fontSize: 13, color: Colors.black54),
+          Text(
+            "Invited by: Player #$invitedBy",
+            style: const TextStyle(fontSize: 13, color: Colors.black54),
           ),
           const SizedBox(height: 3),
-          const Text(
-            "Email: Jeraine@email.com",
-            style: TextStyle(fontSize: 13, color: Colors.black54),
-          ),
-          const SizedBox(height: 3),
-          const Text(
-            "Mobile: 09123456789",
-            style: TextStyle(fontSize: 13, color: Colors.black54),
+          Text(
+            "Group Code: ${inv['pgroup_code'] ?? ''}",
+            style: const TextStyle(fontSize: 13, color: Colors.black54),
           ),
           const SizedBox(height: 15),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () => _respondToInvitation(inv['id'], 'active'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color.fromARGB(255, 1, 128, 5),
                   minimumSize: const Size(70, 30),
@@ -160,14 +254,11 @@ class RequestCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: const Text(
-                  "Accept",
-                  style: TextStyle(fontSize: 12),
-                ),
+                child: const Text("Accept", style: TextStyle(fontSize: 12)),
               ),
               const SizedBox(width: 10),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () => _respondToInvitation(inv['id'], 'declined'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color.fromARGB(255, 219, 39, 26),
                   minimumSize: const Size(70, 30),
@@ -176,13 +267,10 @@ class RequestCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: const Text(
-                  "Delete",
-                  style: TextStyle(fontSize: 12),
-                ),
+                child: const Text("Decline", style: TextStyle(fontSize: 12)),
               ),
             ],
-          )
+          ),
         ],
       ),
     );

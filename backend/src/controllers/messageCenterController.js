@@ -1,8 +1,5 @@
 const messageCenterModel = require('../models/messageCenterModel');
 
-/**
- * 
- */
 async function getPlayerMessages(req, res) {
   try {
     const { playerId } = req.params;
@@ -28,9 +25,7 @@ async function getPlayerMessages(req, res) {
   }
 }
 
-/**
- * Mark a message as read
- */
+
 async function markAsRead(req, res) {
   try {
     const { id } = req.params;

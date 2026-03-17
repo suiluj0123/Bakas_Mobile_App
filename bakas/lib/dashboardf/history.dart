@@ -21,7 +21,7 @@ class _HistoryUIState extends State<HistoryUI> {
   List<dynamic> _allHistory = [];
   List<dynamic> _filteredHistory = [];
 
-  final List<String> tabs = ["Cash In", "Cash Out", "Details"];
+  final List<String> tabs = ["Cash In", "Cash Out", "Lottery"];
 
   String _apiBaseUrl() {
     if (kIsWeb) return 'http://localhost:3001';
@@ -70,6 +70,8 @@ class _HistoryUIState extends State<HistoryUI> {
         _filteredHistory = _allHistory.where((item) => item['type'] == 'CASH_IN').toList();
       } else if (selectedTab == 1) {
         _filteredHistory = _allHistory.where((item) => item['type'] == 'CASH_OUT').toList();
+      } else if (selectedTab == 2) {
+        _filteredHistory = _allHistory.where((item) => ['BET', 'LOTTERY_WIN'].contains(item['type'])).toList();
       } else {
         _filteredHistory = _allHistory;
       }
@@ -200,62 +202,78 @@ class _HistoryUIState extends State<HistoryUI> {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20),
                                   itemCount: _filteredHistory.length,
-                                  itemBuilder: (context, index) {
-                                    final item = _filteredHistory[index];
-                                    final type = item['type'] ?? 'UNKNOWN';
-                                    final dynamic rawAmount = item['amount'];
-                                    final double amount = (rawAmount is String) 
-                                        ? double.tryParse(rawAmount) ?? 0.0 
-                                        : (rawAmount as num).toDouble();
-                                    final channel = item['channel'] ?? 'N/A';
-                                    final createdAt = item['created_at'] != null
-                                        ? DateTime.parse(item['created_at'])
-                                        : DateTime.now();
-                                    final formattedDate =
-                                        "${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')} | ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}";
+                                    itemBuilder: (context, index) {
+                                      final item = _filteredHistory[index];
+                                      final type = item['type'] ?? 'UNKNOWN';
+                                      final dynamic rawAmount = item['amount'];
+                                      final double amount = (rawAmount is String)
+                                          ? double.tryParse(rawAmount) ?? 0.0
+                                          : (rawAmount as num).toDouble();
+                                      final channel = item['channel'] ?? 'N/A';
+                                      final createdAt = item['created_at'] != null
+                                          ? DateTime.parse(item['created_at'])
+                                          : DateTime.now();
+                                      final formattedDate =
+                                          "${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')} | ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}";
 
-                                    return Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          type == 'CASH_IN'
-                                              ? "Cash In Successful"
-                                              : type == 'CASH_OUT'
-                                                  ? "Cash Out Successful"
-                                                  : "Transaction",
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                          "Your $channel payment of ₱${amount.toStringAsFixed(2)} was processed.",
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 5),
-                                        Align(
-                                          alignment: Alignment.centerRight,
-                                          child: Text(
-                                            formattedDate,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.red,
+                                      String title = "Transaction";
+                                      String message = "Your $channel payment of ₱${amount.toStringAsFixed(2)} was processed.";
+                                      Color textColor = Colors.black87;
+
+                                      if (type == 'CASH_IN') {
+                                        title = "Cash In Successful";
+                                        message = "Your $channel payment of ₱${amount.toStringAsFixed(2)} was processed.";
+                                      } else if (type == 'CASH_OUT') {
+                                        title = "Cash Out Successful";
+                                        message = "Your $channel withdrawal of ₱${amount.toStringAsFixed(2)} was processed.";
+                                      } else if (type == 'BET') {
+                                        title = "Lottery Bet";
+                                        message = "Ticket purchase of ₱${amount.toStringAsFixed(2)} from your wallet.";
+                                        textColor = Colors.red.shade900;
+                                      } else if (type == 'LOTTERY_WIN') {
+                                        title = "Lottery Winnings!";
+                                        message = "Congratulations! You won ₱${amount.toStringAsFixed(2)} from a draw.";
+                                        textColor = Colors.green.shade900;
+                                      }
+
+                                      return Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            title,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: type == 'LOTTERY_WIN' ? Colors.green : (type == 'BET' ? Colors.red : Colors.black),
                                             ),
                                           ),
-                                        ),
-                                        const Divider(
-                                          color: Colors.red,
-                                          thickness: 0.5,
-                                        ),
-                                        const SizedBox(height: 10),
-                                      ],
-                                    );
-                                  },
+                                          const SizedBox(height: 5),
+                                          Text(
+                                            message,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: textColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Align(
+                                            alignment: Alignment.centerRight,
+                                            child: Text(
+                                              formattedDate,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
+                                          const Divider(
+                                            color: Colors.red,
+                                            thickness: 0.5,
+                                          ),
+                                          const SizedBox(height: 10),
+                                        ],
+                                      );
+                                    },
                                 ),
                     ),
                   ],

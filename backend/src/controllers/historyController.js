@@ -1,8 +1,5 @@
 const historyModel = require('../models/historyModel');
 
-/**
- *
- */
 async function getPlayerHistory(req, res) {
   try {
     const { playerId } = req.query;
