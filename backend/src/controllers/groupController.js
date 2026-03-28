@@ -3,14 +3,14 @@ const groupModel = require('../models/groupModel');
 
 async function createGroup(req, res) {
   try {
-    const { name, desc, status, group_type, created_by } = req.body;
+    const { name, desc, status, group_type, created_by, drawdate_id, lotterytype_id } = req.body;
 
     if (!name || !created_by) {
       return res.status(400).json({ ok: false, message: 'Name and created_by are required' });
     }
 
     const result = await groupModel.createGroup({
-      name, desc, status, group_type, created_by
+      name, desc, status, group_type, created_by, drawdate_id, lotterytype_id
     });
 
     res.status(201).json({ ok: true, data: result });
@@ -22,7 +22,8 @@ async function createGroup(req, res) {
 
 async function getPublicGroups(req, res) {
   try {
-    const groups = await groupModel.getPublicGroups();
+    const { drawId } = req.query;
+    const groups = await groupModel.getPublicGroups(drawId);
     res.status(200).json({ ok: true, data: groups });
   } catch (error) {
     res.status(500).json({ ok: false, message: error.message });

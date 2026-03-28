@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'app_drawer.dart';
+import '../services/session_service.dart';
 
 class TicketsUI extends StatefulWidget {
   final String? firstName;
@@ -19,6 +20,7 @@ class TicketsUI extends StatefulWidget {
 class _TicketsUIState extends State<TicketsUI> {
   List<dynamic> _tickets = [];
   bool _isLoading = true;
+  bool _isPublic = true;
   String _apiBaseUrl() {
     if (kIsWeb) return 'http://localhost:3001';
     if (Platform.isAndroid) return 'http://10.0.2.2:3001';
@@ -36,7 +38,7 @@ class _TicketsUIState extends State<TicketsUI> {
     int? effectiveId = widget.playerId;
     if (effectiveId == null) {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      effectiveId = args?['playerId'];
+      effectiveId = args?['playerId'] ?? SessionService().playerId;
     }
 
     if (effectiveId == null) {
@@ -137,9 +139,13 @@ class _TicketsUIState extends State<TicketsUI> {
                     children: [
                       Row(
                         children: [
-                          _toggleButton("Public", true),
+                          _toggleButton("Public", _isPublic, () {
+                            setState(() => _isPublic = true);
+                          }),
                           const SizedBox(width: 10),
-                          _toggleButton("Private", false),
+                          _toggleButton("Private", !_isPublic, () {
+                            setState(() => _isPublic = false);
+                          }),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Container(
@@ -170,12 +176,26 @@ class _TicketsUIState extends State<TicketsUI> {
                       Expanded(
                         child: _isLoading
                             ? const Center(child: CircularProgressIndicator())
-                            : _tickets.isEmpty
-                                ? const Center(child: Text("No tickets found"))
-                                : ListView.builder(
-                                    itemCount: _tickets.length,
-                                    itemBuilder: (context, index) {
-                                      final ticket = _tickets[index];
+                            : (() {
+                                final filtered = _tickets.where((t) {
+                                  final gType = t['group_type'];
+                                  // 1 is Public, 2 is Private
+                                  // If group_id is null, it's public (0 or null)
+                                  if (_isPublic) {
+                                    return gType == 1 || gType == null || gType == 0;
+                                  } else {
+                                    return gType == 2;
+                                  }
+                                }).toList();
+
+                                if (filtered.isEmpty) {
+                                  return const Center(child: Text("No tickets found"));
+                                }
+
+                                return ListView.builder(
+                                  itemCount: filtered.length,
+                                  itemBuilder: (context, index) {
+                                    final ticket = filtered[index];
                                       final rawDate = ticket['created_at'] ?? '';
                                       String formattedDate = rawDate;
                                       if (rawDate.isNotEmpty) {
@@ -192,8 +212,9 @@ class _TicketsUIState extends State<TicketsUI> {
                                         formattedDate,
                                         ticket,
                                       );
-                                    },
-                                  ),
+                                  },
+                                );
+                              })(),
                       ),
                     ],
                   ),
@@ -206,18 +227,21 @@ class _TicketsUIState extends State<TicketsUI> {
     );
   }
 
-  Widget _toggleButton(String text, bool active) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-      decoration: BoxDecoration(
-        color: active ? Colors.white : Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: active ? Colors.black : Colors.black54,
-          fontWeight: FontWeight.w500,
+  Widget _toggleButton(String text, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        decoration: BoxDecoration(
+          color: active ? Colors.white : Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: active ? Colors.black : Colors.black54,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );
@@ -324,7 +348,17 @@ class TicketDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final winningAmount = (ticket['winning_amount'] ?? 0);
-    final List<dynamic> selectedNumbers = ticket['selected_numbers'] ?? [];
+    final dynamic rawSelected = ticket['selected_numbers'];
+    List<dynamic> selectedNumbers = [];
+    if (rawSelected is List) {
+      selectedNumbers = rawSelected;
+    } else if (rawSelected is String) {
+      try {
+        selectedNumbers = jsonDecode(rawSelected);
+      } catch (e) {
+        selectedNumbers = rawSelected.split(',').map((s) => s.trim()).toList();
+      }
+    }
 
     return Scaffold(
       body: Container(
@@ -421,11 +455,12 @@ class TicketDetailsScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 15),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.center,
                                 children: selectedNumbers.map((num) {
                                   return Container(
-                                    margin: const EdgeInsets.symmetric(horizontal: 4),
                                     width: 40,
                                     height: 40,
                                     decoration: BoxDecoration(

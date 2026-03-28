@@ -231,7 +231,7 @@ class _chooseGameState extends State<chooseGamePage> {
                         fontFamily: 'Montserrat',
                         fontWeight: FontWeight.w800,
                         fontSize: 35,
-                        color: const Color(0xFF910D0D),
+                        color: const Color(0xFF8B0000),
                       ),
                     ),
                     SizedBox(height: 10),
@@ -276,7 +276,7 @@ class _chooseGameState extends State<chooseGamePage> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
                       child: Divider(
-                        color: const Color(0xFF910D0D),
+                        color: const Color(0xFF8B0000),
                         thickness: 1,
                         height: 20,
                       ),
@@ -306,7 +306,7 @@ class _chooseGameState extends State<chooseGamePage> {
                                 margin: EdgeInsets.fromLTRB(20, 20, 20, 10),
                                 padding: EdgeInsets.all(25),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF910D0D),
+                                  color: const Color(0xFF8B0000),
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: Offset(0, 4))
@@ -355,7 +355,7 @@ class _chooseGameState extends State<chooseGamePage> {
                                 margin: EdgeInsets.fromLTRB(20, 20, 20, 10),
                                 padding: EdgeInsets.all(25),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF910D0D),
+                                  color: const Color(0xFF8B0000),
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: Offset(0, 4))

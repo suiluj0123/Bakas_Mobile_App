@@ -1,5 +1,6 @@
 const express = require('express');
 const betModel = require('../models/betModel');
+const groupModel = require('../models/groupModel');
 const router = express.Router();
 
 router.get('/player/:playerId', async (req, res) => {
@@ -38,7 +39,28 @@ router.post('/create-tickets', async (req, res) => {
       ticketCount: tickets.length
     });
 
-    // 2. Create tickets (bets)
+    // 2. Ensure player is a member of all groups involved
+    const uniqueGroupIds = [...new Set(tickets.map(t => t.groupId))];
+    for (const groupId of uniqueGroupIds) {
+      try {
+        const group = await groupModel.getGroupById(groupId);
+        if (group) {
+          await groupModel.addMember({
+            pgroup_code: group.pgroup_code,
+            player_id: playerId,
+            player_name: '', // Optional: can be fetched if needed
+            name: group.name,
+            desc: group.desc,
+            status: 'active',
+            created_by: playerId
+          });
+        }
+      } catch (groupJoinErr) {
+        console.error('[Betting] Error auto-joining group:', groupJoinErr.message);
+      }
+    }
+
+    // 3. Create tickets (bets)
     for (const ticket of tickets) {
       await betModel.createBet({
         player_id: playerId,

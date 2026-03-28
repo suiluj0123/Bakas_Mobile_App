@@ -62,11 +62,20 @@ async function updateDraw(id, { name, draw_date, cutoff_date, lottery_id, update
   return result.affectedRows > 0;
 }
 
+async function deleteDraw(id) {
+  const [result] = await pool.execute(
+    `UPDATE draws SET deleted_at = NOW(), updated_at = NOW() WHERE id = ?`,
+    [id]
+  );
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   createDraw,
   getUpcomingDraws,
   getDrawById,
   updateDrawResult,
   getDrawResults,
-  updateDraw
+  updateDraw,
+  deleteDraw
 };

@@ -37,8 +37,8 @@ class _publicGroupPageState extends State<publicGroupPage> {
   @override
   void initState() {
     super.initState();
-    _fetchPublicGroups();
     Future.delayed(Duration.zero, () {
+      _fetchPublicGroups();
       _fetchDrawDetails();
     });
   }
@@ -91,8 +91,13 @@ class _publicGroupPageState extends State<publicGroupPage> {
   }
 
   Future<void> _fetchPublicGroups() async {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final drawId = widget.drawId ?? args?['drawId'];
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/groups/public'));
+      final url = drawId != null 
+          ? '${_apiBaseUrl()}/api/groups/public?drawId=$drawId' 
+          : '${_apiBaseUrl()}/api/groups/public';
+      final res = await http.get(Uri.parse(url));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {
@@ -245,7 +250,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
               ElevatedButton(
                 onPressed: () => _showGroupActions(context, group),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF910D0D),
+                  backgroundColor: Color(0xFF8B0000),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   minimumSize: Size(80, 30),
                 ),
@@ -285,6 +290,8 @@ class _publicGroupPageState extends State<publicGroupPage> {
           ElevatedButton(
             onPressed: () async {
               if (nameController.text.isNotEmpty) {
+                final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+                final drawId = widget.drawId ?? args?['drawId'];
                 final res = await http.post(
                   Uri.parse('${_apiBaseUrl()}/api/groups'),
                   headers: {'Content-Type': 'application/json'},
@@ -293,6 +300,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
                     'desc': descController.text,
                     'group_type': 'Public',
                     'status': 'Active',
+                    'drawdate_id': drawId,
                     'created_by': widget.playerId,
                   }),
                 );
@@ -342,7 +350,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
                         fontFamily: 'Montserrat',
                         fontWeight: FontWeight.w800,
                         fontSize: 35,
-                        color: Color(0xFF910D0D),
+                        color: Color(0xFF8B0000),
                       ),
                     ),
                     SizedBox(height: 10),
@@ -366,7 +374,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
                               icon: Icon(Icons.add, size: 18),
                               label: Text("Create Group", style: TextStyle(fontSize: 12)),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF910D0D),
+                                backgroundColor: Color(0xFF8B0000),
                                 foregroundColor: Colors.white,
                               ),
                             ),
@@ -377,14 +385,14 @@ class _publicGroupPageState extends State<publicGroupPage> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
                       child: Divider(
-                        color: const Color(0xFF910D0D),
+                        color: const Color(0xFF8B0000),
                         thickness: 1,
                         height: 20,
                       ),
                     ),
                     Expanded(
                       child: _isLoading
-                          ? Center(child: CircularProgressIndicator(color: Color(0xFF910D0D)))
+                          ? Center(child: CircularProgressIndicator(color: Color(0xFF8B0000)))
                           : _groups.isEmpty
                               ? Center(child: Text("No public groups available"))
                               : ListView.builder(

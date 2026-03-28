@@ -4,6 +4,7 @@ import 'cash_inout.dart';
 import 'messagecenter.dart';
 import 'groups.dart';
 import 'grouprequest.dart';
+import '../services/session_service.dart';
 
 class AppDrawer extends StatelessWidget {
   final String? firstName;
@@ -15,8 +16,8 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final effectiveFirstName = firstName ?? args?['firstName'];
-    final effectivePlayerId = playerId ?? args?['playerId'];
+    final effectiveFirstName = firstName ?? args?['firstName'] ?? SessionService().firstName;
+    final effectivePlayerId = playerId ?? args?['playerId'] ?? SessionService().playerId;
     final displayName = effectiveFirstName ?? 'User';
 
     return Drawer(
@@ -76,7 +77,7 @@ class AppDrawer extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 children: [
                   _drawerItem(context, Icons.home_outlined, "Home", displayName, effectivePlayerId, route: '/dashboard'),
-                  _drawerItem(context, Icons.sports_esports_outlined, "Bakas", displayName, effectivePlayerId, route: '/bakas'),
+                  _drawerItem(context, Icons.sports_esports_outlined, "Bakas", displayName, effectivePlayerId, route: '/draw-date'),
                   _drawerItem(context, Icons.account_balance_wallet_outlined, "Cash In / Cash Out", displayName, effectivePlayerId, route: '/cash-inout'),
                   _drawerItem(context, Icons.confirmation_num_outlined, "Tickets", displayName, effectivePlayerId, route: '/tickets'),
                   _drawerItem(context, Icons.history_outlined, "History", displayName, effectivePlayerId, route: '/history'),

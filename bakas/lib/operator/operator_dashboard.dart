@@ -365,64 +365,77 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
     if (_lotteries.isEmpty) return;
     
     int? selectedLotteryId = draw['lottery_id'];
-    String rawDate = draw['draw_date'] ?? '';
-    final drawDateController = TextEditingController(text: rawDate.contains('T') ? rawDate.split('T')[0] + ' ' + rawDate.split('T')[1].split('.')[0] : rawDate);
+    String rawDrawDate = draw['draw_date'] ?? '';
+    String rawCutoffDate = draw['cutoff_date'] ?? '';
+    
+    final drawDateController = TextEditingController(text: rawDrawDate.contains('T') ? rawDrawDate.split('T')[0] + ' ' + rawDrawDate.split('T')[1].split('.')[0] : rawDrawDate);
+    final cutoffDateController = TextEditingController(text: rawCutoffDate.contains('T') ? rawCutoffDate.split('T')[0] + ' ' + rawCutoffDate.split('T')[1].split('.')[0] : rawCutoffDate);
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text("Edit Draw"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButton<int>(
-                value: selectedLotteryId,
-                isExpanded: true,
-                items: _lotteries.map<DropdownMenuItem<int>>((l) {
-                  return DropdownMenuItem<int>(value: l['id'], child: Text(l['name']));
-                }).toList(),
-                onChanged: (val) => setDialogState(() => selectedLotteryId = val),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: drawDateController,
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: "End / Draw Date (YYYY-MM-DD HH:MM:SS)",
-                  hintText: "Tap to select date & time",
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButton<int>(
+                  value: selectedLotteryId,
+                  isExpanded: true,
+                  items: _lotteries.map<DropdownMenuItem<int>>((l) {
+                    return DropdownMenuItem<int>(value: l['id'], child: Text(l['name']));
+                  }).toList(),
+                  onChanged: (val) => setDialogState(() => selectedLotteryId = val),
                 ),
-                onTap: () async {
-                  DateTime initial = DateTime.now();
-                  try {
-                    if (drawDateController.text.isNotEmpty) {
-                      initial = DateTime.parse(drawDateController.text);
-                    }
-                  } catch (e) {
-                      // ignore
-                  }
-                  DateTime? pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: initial,
-                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                    lastDate: DateTime(2101),
-                  );
-                  if (pickedDate != null) {
-                    TimeOfDay? pickedTime = await showTimePicker(
-                      context: context,
-                      initialTime: TimeOfDay.fromDateTime(initial),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: cutoffDateController,
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                    labelText: "Start / Cutoff Date (Start of Betting)",
+                    hintText: "Tap to select date & time",
+                  ),
+                  onTap: () async {
+                    DateTime initial = DateTime.now();
+                    try { if (cutoffDateController.text.isNotEmpty) initial = DateTime.parse(cutoffDateController.text); } catch (_) {}
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context, initialDate: initial, firstDate: DateTime(2000), lastDate: DateTime(2101),
                     );
-                    if (pickedTime != null) {
-                      DateTime finalDateTime = DateTime(
-                        pickedDate.year, pickedDate.month, pickedDate.day,
-                        pickedTime.hour, pickedTime.minute,
-                      );
-                      drawDateController.text = "${finalDateTime.year.toString().padLeft(4, '0')}-${finalDateTime.month.toString().padLeft(2, '0')}-${finalDateTime.day.toString().padLeft(2, '0')} ${finalDateTime.hour.toString().padLeft(2, '0')}:${finalDateTime.minute.toString().padLeft(2, '0')}:00";
+                    if (pickedDate != null) {
+                      TimeOfDay? pickedTime = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(initial));
+                      if (pickedTime != null) {
+                        DateTime finalDateTime = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, pickedTime.hour, pickedTime.minute);
+                        cutoffDateController.text = "${finalDateTime.year.toString().padLeft(4, '0')}-${finalDateTime.month.toString().padLeft(2, '0')}-${finalDateTime.day.toString().padLeft(2, '0')} ${finalDateTime.hour.toString().padLeft(2, '0')}:${finalDateTime.minute.toString().padLeft(2, '0')}:00";
+                      }
                     }
-                  }
-                },
-              ),
-            ],
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: drawDateController,
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                    labelText: "End / Draw Date (Draw Result)",
+                    hintText: "Tap to select date & time",
+                  ),
+                  onTap: () async {
+                    DateTime initial = DateTime.now();
+                    try { if (drawDateController.text.isNotEmpty) initial = DateTime.parse(drawDateController.text); } catch (_) {}
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context, initialDate: initial, firstDate: DateTime(2000), lastDate: DateTime(2101),
+                    );
+                    if (pickedDate != null) {
+                      TimeOfDay? pickedTime = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(initial));
+                      if (pickedTime != null) {
+                        DateTime finalDateTime = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, pickedTime.hour, pickedTime.minute);
+                        drawDateController.text = "${finalDateTime.year.toString().padLeft(4, '0')}-${finalDateTime.month.toString().padLeft(2, '0')}-${finalDateTime.day.toString().padLeft(2, '0')} ${finalDateTime.hour.toString().padLeft(2, '0')}:${finalDateTime.minute.toString().padLeft(2, '0')}:00";
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
@@ -430,12 +443,12 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
               onPressed: () async {
                 try {
                   final response = await http.put(
-                    Uri.parse('${_apiBaseUrl()}/api/operators/draws/${draw['id']}'),
+                    Uri.parse('${_apiBaseUrl()}/api/draws/${draw['id']}'),
                     headers: {'Content-Type': 'application/json'},
                     body: jsonEncode({
                       'name': 'Draw for ' + selectedLotteryId.toString(),
                       'draw_date': drawDateController.text,
-                      'cutoff_date': drawDateController.text,
+                      'cutoff_date': cutoffDateController.text,
                       'lottery_id': selectedLotteryId,
                       'updated_by': widget.operatorId,
                     }),
@@ -464,6 +477,37 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _deleteDraw(dynamic draw) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Delete Game"),
+        content: Text("Are you sure you want to delete Draw #${draw['id']} (${draw['game_name']})?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              try {
+                final response = await http.delete(Uri.parse('${_apiBaseUrl()}/api/draws/${draw['id']}'));
+                if (response.statusCode == 200) {
+                  Navigator.pop(ctx);
+                  _fetchData();
+                } else {
+                  debugPrint("Failed to delete draw: ${response.body}");
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: ${response.body}')));
+                }
+              } catch (e) {
+                debugPrint("Exception deleting draw: $e");
+              }
+            },
+            child: const Text("Delete"),
+          ),
+        ],
       ),
     );
   }
@@ -558,6 +602,10 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
                               IconButton(
                                 icon: const Icon(Icons.edit, size: 20),
                                 onPressed: () => _showEditDrawDialog(d),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                onPressed: () => _deleteDraw(d),
                               ),
                             ],
                           ),

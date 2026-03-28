@@ -154,7 +154,7 @@ class _startBetPageState extends State<startBetPage> {
       width: 320,
       margin: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFF910D0D), width: 2),
+        border: Border.all(color: const Color(0xFF8B0000), width: 2),
         borderRadius: const BorderRadius.all(Radius.circular(20)),
       ),
       child: Column(
@@ -162,7 +162,7 @@ class _startBetPageState extends State<startBetPage> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: const BoxDecoration(
-              color: Color(0xFF910D0D),
+              color: Color(0xFF8B0000),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(18),
                 topRight: Radius.circular(18),
@@ -205,14 +205,14 @@ class _startBetPageState extends State<startBetPage> {
                   height: 35,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF910D0D)),
+                    border: Border.all(color: const Color(0xFF8B0000)),
                     color: hasValue ? Colors.white : Colors.transparent,
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     hasValue ? '${ticket.selectedNumbers[i]}' : '?',
                     style: TextStyle(
-                      color: const Color(0xFF910D0D),
+                      color: const Color(0xFF8B0000),
                       fontFamily: 'Montserrat',
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -224,7 +224,7 @@ class _startBetPageState extends State<startBetPage> {
           ),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 40),
-            child: Divider(color: Color(0xFF910D0D), thickness: 1, height: 25),
+            child: Divider(color: Color(0xFF8B0000), thickness: 1, height: 25),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(15, 0, 15, 10),
@@ -254,8 +254,8 @@ class _startBetPageState extends State<startBetPage> {
                   },
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF910D0D) : Colors.transparent,
-                      border: Border.all(color: const Color(0xFF910D0D)),
+                      color: isSelected ? const Color(0xFF8B0000) : Colors.transparent,
+                      border: Border.all(color: const Color(0xFF8B0000)),
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
@@ -278,13 +278,13 @@ class _startBetPageState extends State<startBetPage> {
             child: OutlinedButton(
               onPressed: () => setState(() => ticket.selectedNumbers.clear()),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF910D0D)),
+                side: const BorderSide(color: Color(0xFF8B0000)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 minimumSize: const Size(80, 30),
               ),
               child: const Text(
                 'Clear',
-                style: TextStyle(color: Color(0xFF910D0D), fontFamily: 'Montserrat', fontWeight: FontWeight.w700, fontSize: 12),
+                style: TextStyle(color: Color(0xFF8B0000), fontFamily: 'Montserrat', fontWeight: FontWeight.w700, fontSize: 12),
               ),
             ),
           ),
@@ -408,7 +408,7 @@ class _startBetPageState extends State<startBetPage> {
                           fontFamily: 'Montserrat',
                           fontWeight: FontWeight.w800,
                           fontSize: 35,
-                          color: Color(0xFF910D0D),
+                          color: Color(0xFF8B0000),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -454,7 +454,7 @@ class _startBetPageState extends State<startBetPage> {
                       const Padding(
                         padding: EdgeInsets.fromLTRB(15, 0, 15, 0),
                         child: Divider(
-                          color: Color(0xFF910D0D),
+                          color: Color(0xFF8B0000),
                           thickness: 1,
                           height: 20,
                         ),
@@ -505,13 +505,13 @@ class _startBetPageState extends State<startBetPage> {
                                 _tickets.add(Ticket(id: _nextTicketId++, selectedNumbers: []));
                               });
                             },
-                            icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFF910D0D)),
+                            icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFF8B0000)),
                             label: const Text(
                               'Add Another Ticket',
                               style: TextStyle(color: Colors.black, fontFamily: 'Montserrat', fontSize: 13, fontWeight: FontWeight.w600),
                             ),
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFF910D0D)),
+                              side: const BorderSide(color: Color(0xFF8B0000)),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                           ),
@@ -532,7 +532,7 @@ class _startBetPageState extends State<startBetPage> {
                         child: ElevatedButton(
                           onPressed: _isSubmitting ? null : _submitTickets,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF910D0D),
+                            backgroundColor: const Color(0xFF8B0000),
                             foregroundColor: Colors.white,
                             minimumSize: const Size(double.infinity, 55),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),

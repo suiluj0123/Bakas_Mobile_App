@@ -240,6 +240,8 @@ class _privateGroupPageState extends State<privateGroupPage> {
           ElevatedButton(
             onPressed: () async {
               if (nameController.text.isNotEmpty) {
+                final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+                final drawId = widget.drawId ?? args?['drawId'];
                 final res = await http.post(
                   Uri.parse('${_apiBaseUrl()}/api/groups'),
                   headers: {'Content-Type': 'application/json'},
@@ -248,6 +250,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
                     'desc': descController.text,
                     'group_type': 'Private',
                     'status': 'Active',
+                    'drawdate_id': drawId,
                     'created_by': widget.playerId,
                   }),
                 );
@@ -310,7 +313,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
                   ElevatedButton(
                     onPressed: () => _showGroupActions(context, group),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF910D0D),
+                      backgroundColor: Color(0xFF8B0000),
                       minimumSize: Size(70, 25),
                       padding: EdgeInsets.symmetric(horizontal: 10),
                     ),
@@ -381,7 +384,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
                         fontFamily: 'Montserrat',
                         fontWeight: FontWeight.w800,
                         fontSize: 35,
-                        color: Color(0xFF910D0D),
+                        color: Color(0xFF8B0000),
                       ),
                     ),
                     SizedBox(height: 10),
@@ -405,7 +408,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
                               icon: Icon(Icons.add, size: 18),
                               label: Text("Create", style: TextStyle(fontSize: 11)),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF910D0D),
+                                backgroundColor: Color(0xFF8B0000),
                                 foregroundColor: Colors.white,
                               ),
                             ),
@@ -429,14 +432,14 @@ class _privateGroupPageState extends State<privateGroupPage> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
                       child: Divider(
-                        color: const Color(0xFF910D0D),
+                        color: const Color(0xFF8B0000),
                         thickness: 1,
                         height: 20,
                       ),
                     ),
                     Expanded(
                       child: _isLoading
-                        ? Center(child: CircularProgressIndicator(color: Color(0xFF910D0D)))
+                        ? Center(child: CircularProgressIndicator(color: Color(0xFF8B0000)))
                         : _groups.isEmpty
                           ? Center(child: Text("No private groups yet"))
                           : ListView.builder(

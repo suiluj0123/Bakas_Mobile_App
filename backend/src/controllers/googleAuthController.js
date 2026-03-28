@@ -39,6 +39,7 @@ async function googleLogin(req, res, next) {
     return res.status(200).json({
       ok: true,
       user: {
+        id: user.id,
         name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
         first_name: user.first_name,
         last_name: user.last_name,

@@ -8,6 +8,7 @@ import 'dashboardf/messagecenter.dart';
 import 'dashboardf/history.dart';
 import 'dashboardf/grouprequest.dart';
 import 'dashboardf/app_drawer.dart';
+import 'services/session_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -65,7 +66,7 @@ class _DashboardUIState extends State<DashboardUI> {
 
       final route = ModalRoute.of(context);
       final args = route?.settings.arguments as Map<String, dynamic>?;
-      final effectivePlayerId = widget.playerId ?? args?['playerId'];
+      final effectivePlayerId = widget.playerId ?? args?['playerId'] ?? SessionService().playerId;
 
       if (effectivePlayerId == null) {
         if (mounted) setState(() => _isLoading = false);
@@ -116,8 +117,8 @@ class _DashboardUIState extends State<DashboardUI> {
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final userFirstName = widget.firstName ?? args?['firstName'];
-    final userPlayerId = widget.playerId ?? args?['playerId'];
+    final userFirstName = widget.firstName ?? args?['firstName'] ?? SessionService().firstName;
+    final userPlayerId = widget.playerId ?? args?['playerId'] ?? SessionService().playerId;
     
     final displayName = (userFirstName != null && userFirstName.isNotEmpty) 
         ? userFirstName 
@@ -244,7 +245,7 @@ class _DashboardUIState extends State<DashboardUI> {
                         onTap: () {
                           Navigator.pushNamed(
                             context,
-                            '/bakas',
+                            '/draw-date',
                             arguments: {
                               'firstName': displayName,
                               'playerId': userPlayerId,

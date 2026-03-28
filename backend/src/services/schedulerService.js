@@ -27,10 +27,9 @@ async function checkAndProcessDraws() {
   }
 }
 
-// Run every minute
 function startScheduler() {
   setInterval(checkAndProcessDraws, 60000);
-  checkAndProcessDraws(); // Run initially
+  checkAndProcessDraws(); 
 }
 
 module.exports = { startScheduler };

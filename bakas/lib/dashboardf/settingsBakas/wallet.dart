@@ -1,142 +1,264 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../app_drawer.dart';
 import '/widgets/BakasHeader.dart';
 import '/widgets/WhiteContainer.dart';
 import '/widgets/backgroundRed.dart';
 
-class walletPage extends StatelessWidget {
+class walletPage extends StatefulWidget {
   final String? firstName;
   final int? playerId;
   const walletPage({super.key, this.firstName, this.playerId});
 
-void EditWalletModal(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text("Edit Wallet", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close, color: Colors.black),
-          ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("Account Number*", style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
-          const SizedBox(height: 8),
-          const TextField(
-            decoration: InputDecoration(
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  @override
+  State<walletPage> createState() => _walletPageState();
+}
+
+class _walletPageState extends State<walletPage> {
+  List<dynamic> _wallets = [];
+  bool _isLoading = true;
+
+  final _accountNumberController = TextEditingController();
+  String _selectedWalletType = "GCash";
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWallets();
+  }
+
+  @override
+  void dispose() {
+    _accountNumberController.dispose();
+    super.dispose();
+  }
+
+  String _apiBaseUrl() {
+    if (kIsWeb) return 'http://localhost:3001';
+    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
+    return 'http://localhost:3001';
+  }
+
+  Future<void> _fetchWallets() async {
+    if (widget.playerId == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+    try {
+      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/wallet/${widget.playerId}'));
+      if (res.statusCode == 200) {
+        final payload = jsonDecode(res.body);
+        if (payload['ok'] == true) {
+          setState(() {
+            _wallets = payload['data'] ?? [];
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching wallets: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _addWallet() async {
+    if (_accountNumberController.text.isEmpty) return;
+    try {
+      final res = await http.post(
+        Uri.parse('${_apiBaseUrl()}/api/settings/addWallet'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'playerId': widget.playerId,
+          'wallet_name': widget.firstName,
+          'wallet_type': _selectedWalletType,
+          'wallet_number': _accountNumberController.text,
+          'balance': 0.0,
+        }),
+      );
+
+      if (res.statusCode == 200) {
+        _fetchWallets();
+        _accountNumberController.clear();
+      }
+    } catch (e) {
+      debugPrint('Error adding wallet: $e');
+    }
+  }
+
+  Future<void> _editWallet(int walletId) async {
+    if (_accountNumberController.text.isEmpty) return;
+    try {
+      final res = await http.put(
+        Uri.parse('${_apiBaseUrl()}/api/settings/editWallet'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'playerId': widget.playerId,
+          'walletId': walletId,
+          'wallet_number': _accountNumberController.text,
+        }),
+      );
+
+      if (res.statusCode == 200) {
+        _fetchWallets();
+        _accountNumberController.clear();
+      }
+    } catch (e) {
+      debugPrint('Error editing wallet: $e');
+    }
+  }
+
+  void EditWalletModal(BuildContext context, dynamic wallet) {
+    _accountNumberController.text = wallet['wallet_number'] ?? '';
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("Edit Wallet", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close, color: Colors.black),
             ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                child: const Text("Save", style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Account Number*", style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _accountNumberController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
-              const SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B0000)),
-                child: const Text("Cancel", style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          )
-        ],
-      ),
-    ),
-  );
-}
-void LinkWalletModal(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text("Link Wallet", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close, color: Colors.black),
-          ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text("Account Number*", style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
-                    SizedBox(height: 5),
-                    TextField(
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      ),
-                    ),
-                  ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    _editWallet(wallet['walletId']);
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  child: const Text("Save", style: TextStyle(color: Colors.white)),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text("Wallet Type*", style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
-                    SizedBox(height: 5),
-                    TextField(
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        hintText: "Select",
-                        suffixIcon: Icon(Icons.arrow_drop_down),
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B0000)),
+                  child: const Text("Cancel", style: TextStyle(color: Colors.white)),
                 ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  void LinkWalletModal(BuildContext context) {
+    _accountNumberController.clear();
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Link Wallet", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.black),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                child: const Text("Save", style: TextStyle(color: Colors.white)),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Account Number*", style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
+                        const SizedBox(height: 5),
+                        TextField(
+                          controller: _accountNumberController,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Wallet Type*", style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
+                        const SizedBox(height: 5),
+                        DropdownButtonFormField<String>(
+                          value: _selectedWalletType,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ),
+                          items: ["GCash", "Maya", "Bank"].map((type) {
+                            return DropdownMenuItem(value: type, child: Text(type));
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setModalState(() => _selectedWalletType = val);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B0000)),
-                child: const Text("Cancel", style: TextStyle(color: Colors.white)),
-              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      _addWallet();
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    child: const Text("Save", style: TextStyle(color: Colors.white)),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B0000)),
+                    child: const Text("Cancel", style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              )
             ],
-          )
-        ],
+          ),
+        ),
       ),
-    ),
-  );
-}
-  
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return backgroundRed(
@@ -145,8 +267,8 @@ void LinkWalletModal(BuildContext context) {
         backgroundColor: Colors.transparent,
         appBar: myAppBar('Setting'),
         drawer: AppDrawer(
-          firstName: firstName,
-          playerId: playerId,
+          firstName: widget.firstName,
+          playerId: widget.playerId,
         ),
         body: SafeArea(
           bottom: false,
@@ -157,139 +279,40 @@ void LinkWalletModal(BuildContext context) {
                 children: [
                   Row(
                     children: [
-                      OutlinedButton(
-                        onPressed: () {
-                           Navigator.pop(context);
-                           Navigator.pushNamed(context, '/setting', arguments: {
-                             'firstName': firstName,
-                             'playerId': playerId,
-                           });
-                        },
-                        style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          foregroundColor: Colors.black87,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                        ),
-                        child: Text(
-                          'Profile',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      OutlinedButton(
-                        onPressed: () {
-                           Navigator.pop(context);
-                           Navigator.pushNamed(context, '/wallet', arguments: {
-                             'firstName': firstName,
-                             'playerId': playerId,
-                           });
-                        },
-                        style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          foregroundColor: Colors.black87,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                        ),
-                        child: Text(
-                          'Wallet',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      OutlinedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, '/security', arguments: {
-                            'firstName': firstName,
-                            'playerId': playerId,
-                          });
-                        },
-                        style: OutlinedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          foregroundColor: Colors.black87,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                        ),
-                        child: Text(
-                          'Security',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                      _navButton('Profile', '/setting'),
+                      _navButton('Wallet', '/wallet'),
+                      _navButton('Security', '/security'),
                     ],
                   ),
-                  
                   const SizedBox(height: 30),
-
-                  Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        height: 190,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF007DFE),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Stack(
-                          children: [
-                            Positioned(
-                              top: 0,
-                              right: 0,
-                              child: InkWell(
-                                onTap: () => EditWalletModal(context),
-                                child: const Icon(Icons.edit_document, color: Colors.white, size: 24),
-                              ),
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                if (_wallets.isEmpty)
+                                  const Padding(
+                                    padding: EdgeInsets.all(20.0),
+                                    child: Text("No wallet linked yet."),
+                                  ),
+                                ..._wallets.map((wallet) => _walletCard(wallet)).toList(),
+                                const SizedBox(height: 40),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 55,
+                                  child: ElevatedButton(
+                                    onPressed: () => LinkWalletModal(context),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF8B0000),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                    ),
+                                    child: const Text("Link Wallet", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const Center(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.account_balance_wallet, color: Colors.white, size: 40),
-                                  SizedBox(width: 10),
-                                  Text("GCash", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                            Align(
-                              alignment: Alignment.bottomLeft,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text("${firstName ?? 'User'} C.", style: const TextStyle(color: Colors.white, fontSize: 16)),
-                                  Text("******** 123", style: const TextStyle(color: Colors.white, fontSize: 16)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 40),
-
-                      SizedBox(
-                        width: double.infinity,
-                        height: 55,
-                        child: ElevatedButton(
-                          onPressed: () => LinkWalletModal(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF8B0000),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                           ),
-                          child: const Text("Link Wallet", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -300,4 +323,78 @@ void LinkWalletModal(BuildContext context) {
     );
   }
 
-}
+  Widget _navButton(String label, String route) {
+    final bool isCurrent = ModalRoute.of(context)?.settings.name == route;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: OutlinedButton(
+        onPressed: isCurrent
+            ? null
+            : () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, route, arguments: {
+                  'firstName': widget.firstName,
+                  'playerId': widget.playerId,
+                });
+              },
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          foregroundColor: isCurrent ? Colors.red : Colors.black87,
+          side: isCurrent ? const BorderSide(color: Colors.red) : null,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _walletCard(dynamic wallet) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF007DFE),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.account_balance_wallet, color: Colors.white, size: 24),
+                  const SizedBox(width: 10),
+                  Text(wallet['wallet_type'] ?? "Wallet",
+                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              InkWell(
+                onTap: () => EditWalletModal(context, wallet),
+                child: const Icon(Icons.edit_document, color: Colors.white, size: 24),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(wallet['wallet_name'] ?? widget.firstName ?? "User",
+                  style: const TextStyle(color: Colors.white, fontSize: 16)),
+              Text(wallet['wallet_number'] ?? "*******", style: const TextStyle(color: Colors.white, fontSize: 16)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

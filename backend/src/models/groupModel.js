@@ -17,12 +17,11 @@ function mapMemberStatus(status) {
 }
 
 
-async function createGroup({ name, desc, status, group_type, created_by }) {
+async function createGroup({ name, desc, status, group_type, created_by, drawdate_id, lotterytype_id }) {
   const pgroup_code = generateGroupCode();
   const numericStatus = (status === 'Inactive' || status === 1) ? 1 : 0;
 
-  const groupTypeFlag = (group_type === 'Private') ? 2 : 1;
-
+  const groupTypeFlag = (group_type === 'Private' || lotterytype_id === 2) ? 2 : 1;
 
   const [result] = await pool.execute(
     `INSERT INTO \`groups\` 
@@ -31,7 +30,7 @@ async function createGroup({ name, desc, status, group_type, created_by }) {
     [
       pgroup_code,
       groupTypeFlag, 
-      32,            
+      drawdate_id || 32,            
       4,            
       null,         
       name,
@@ -59,12 +58,15 @@ async function createGroup({ name, desc, status, group_type, created_by }) {
 }
 
 
-async function getPublicGroups() {
+async function getPublicGroups(drawId) {
   const [rows] = await pool.execute(
-    `SELECT id, pgroup_code, name, \`desc\`, total_bets, max_per, status, created_by, created_at, lotterytype_id
-     FROM \`groups\`
+    `SELECT id, pgroup_code, name, \`desc\`, total_bets, max_per, status, created_by, created_at, lotterytype_id,
+            drawdate_id as draw_id, 'public' as type,
+            (SELECT COUNT(*) FROM private_groups pg WHERE pg.pgroup_code = g.pgroup_code AND pg.status = 1 AND pg.deleted_at IS NULL) as member_count
+     FROM \`groups\` g
      WHERE deleted_at IS NULL AND (status = 'Active' OR status = 0) AND lotterytype_id = 1
-     ORDER BY created_at DESC`
+     ORDER BY CASE WHEN drawdate_id = ? THEN 0 ELSE 1 END, created_at DESC`,
+    [drawId || 0]
   );
   return rows;
 }
@@ -73,10 +75,12 @@ async function getPublicGroups() {
 async function getGroupsByPlayerId(playerId) {
   const [rows] = await pool.execute(
     `SELECT g.id, g.pgroup_code, g.name, g.\`desc\`, g.total_bets, g.max_per, g.status,
-            g.created_by, g.created_at, pg.status AS member_status, g.lotterytype_id
+            g.created_by, g.created_at, pg.status AS member_status, g.lotterytype_id,
+            g.drawdate_id as draw_id, CASE WHEN g.lotterytype_id = 1 THEN 'public' ELSE 'private' END as type,
+            (SELECT COUNT(*) FROM private_groups pgc WHERE pgc.pgroup_code = g.pgroup_code AND pgc.status = 1 AND pgc.deleted_at IS NULL) as member_count
      FROM \`groups\` g
      INNER JOIN private_groups pg ON g.pgroup_code = pg.pgroup_code
-     WHERE pg.player_id = ? AND pg.status = 1 AND g.deleted_at IS NULL AND pg.deleted_at IS NULL AND g.lotterytype_id = 2
+     WHERE pg.player_id = ? AND pg.status = 1 AND g.deleted_at IS NULL AND pg.deleted_at IS NULL
      ORDER BY g.created_at DESC`,
     [playerId]
   );
@@ -88,8 +92,10 @@ async function getGroupById(id) {
   const [rows] = await pool.execute(
     `SELECT id, pgroup_code, lotterytype_id, drawdate_id, system_id, operator_id,
             name, \`desc\`, total_bets, max_per, gen_numbers, status,
-            created_by, created_at, updated_at
-     FROM \`groups\`
+            created_by, created_at, updated_at,
+            drawdate_id as draw_id, CASE WHEN lotterytype_id = 1 THEN 'public' ELSE 'private' END as type,
+            (SELECT COUNT(*) FROM private_groups pg WHERE pg.pgroup_code = g.pgroup_code AND pg.status = 1 AND pg.deleted_at IS NULL) as member_count
+     FROM \`groups\` g
      WHERE id = ? AND deleted_at IS NULL
      LIMIT 1`,
     [id]

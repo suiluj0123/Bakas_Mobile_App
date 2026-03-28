@@ -10,6 +10,7 @@ const lotteryRoutes = require('./routes/lotteryRoutes');
 const drawRoutes = require('./routes/drawRoutes');
 const betRoutes = require('./routes/betRoutes');
 const operatorRoutes = require('./routes/operatorRoutes');
+const settingRoutes = require('./routes/settingRoutes');
 
 function createApp() {
   const app = express();
@@ -30,6 +31,7 @@ function createApp() {
   app.use('/api/draws', drawRoutes);
   app.use('/api/bets', betRoutes);
   app.use('/api/operators', operatorRoutes);
+  app.use('/api/settings', settingRoutes);
 
   app.use((_req, res) => {
     res.status(404).json({ ok: false, message: 'Not found' });

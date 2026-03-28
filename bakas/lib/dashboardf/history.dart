@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'app_drawer.dart';
+import '../services/session_service.dart';
 
 class HistoryUI extends StatefulWidget {
   final int? playerId;
@@ -36,14 +37,15 @@ class _HistoryUIState extends State<HistoryUI> {
   }
 
   Future<void> _fetchHistory() async {
-    if (widget.playerId == null) {
+    final effectivePlayerId = widget.playerId ?? SessionService().playerId;
+    if (effectivePlayerId == null) {
       setState(() => _isLoading = false);
       return;
     }
 
     try {
       final res = await http.get(
-        Uri.parse('${_apiBaseUrl()}/history?playerId=${widget.playerId}'),
+        Uri.parse('${_apiBaseUrl()}/history?playerId=$effectivePlayerId'),
       );
 
       if (res.statusCode == 200) {

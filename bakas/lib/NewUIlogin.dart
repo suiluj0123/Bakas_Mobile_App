@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'dashboard.dart';
 import 'operator/operator_dashboard.dart';
 import 'services/google_auth_service.dart';
+import 'services/session_service.dart';
 import 'ForgetPassword.dart';
 
 class GlassLoginUI extends StatelessWidget {
@@ -59,6 +60,11 @@ class _GlassLoginScreenState extends State<_GlassLoginScreen> {
       // Extract first name from user data
       final rawName = (userData['name'] ?? '') as String;
       final firstName = rawName.isNotEmpty ? rawName.split(' ').first : 'User';
+      // Save to SessionService
+      SessionService().saveSession(
+        playerId: userData['id'] as int?,
+        firstName: firstName,
+      );
 
         Navigator.pushAndRemoveUntil(
           context,
@@ -114,6 +120,11 @@ class _GlassLoginScreenState extends State<_GlassLoginScreen> {
             rawName.isNotEmpty ? rawName.split(' ').first : 'User';
 
         final roleId = userData?['role_id'] ?? 1;
+        // Save to SessionService
+        SessionService().saveSession(
+          playerId: userData?['id'] as int?,
+          firstName: firstName,
+        );
 
         if (roleId > 1) {
           // Operator Login

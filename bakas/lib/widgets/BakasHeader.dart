@@ -55,7 +55,7 @@ class myDrawer extends StatelessWidget {
           leading: Icon(Icons.home),
           title: const Text('Home')),
         ListTile(
-          onTap: () => Navigator.pushNamed(context, '/bakas') ,
+          onTap: () => Navigator.pushNamed(context, '/draw-date') ,
           leading: Icon(Icons.sports_esports_outlined),
           title: const Text('Bakas')),
         ListTile(
@@ -142,13 +142,28 @@ class _PlayerBalanceWidgetState extends State<PlayerBalanceWidget> {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(0, 0, 0, 40),
-      child: Text(
-        _isLoading ? '💵 Loading...' : '💵 ${_balance.toStringAsFixed(2)}',
-        style: TextStyle(
-          fontSize: 20,
-          fontFamily: 'BebasNeue',
-          color: Colors.grey[200],
-        ),
+      child: Column(
+        children: [
+          const Text(
+            'Total Credits:',
+            style: TextStyle(
+              fontSize: 16,
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w600,
+              color: Colors.white70,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            _isLoading ? 'Loading...' : '₱ ${_balance.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 28,
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }

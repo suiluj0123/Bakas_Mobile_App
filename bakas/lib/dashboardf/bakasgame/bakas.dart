@@ -3,6 +3,7 @@ import '../app_drawer.dart';
 import '../../widgets/BakasHeader.dart';
 import '../../widgets/WhiteContainer.dart';
 import '../../widgets/backgroundRed.dart';
+import '../../services/session_service.dart';
 
 class BakasPage extends StatefulWidget {
   final String? firstName;
@@ -26,15 +27,15 @@ class _BakasPageState extends State<BakasPage> {
         appBar: myAppBar('Bakas'),
         //drawer widget file i2
         drawer: AppDrawer(
-          firstName: widget.firstName,
-          playerId: widget.playerId,
+          firstName: widget.firstName ?? SessionService().firstName,
+          playerId: widget.playerId ?? SessionService().playerId,
         ),
         body: SafeArea(
           bottom: false,
           child: Column(
             children: [
               //balance widget import nlang para di na gagawa every page
-              PlayerBalanceWidget(playerId: widget.playerId),
+              PlayerBalanceWidget(playerId: widget.playerId ?? SessionService().playerId),
               //White container widget din i2
               WhiteContainer(
                 child: Column(
@@ -76,7 +77,7 @@ class _BakasPageState extends State<BakasPage> {
                                 margin: EdgeInsets.fromLTRB(20, 20, 20, 5),
                                 padding: EdgeInsets.all(30),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF910D0D),
+                                  color: const Color(0xFF8B0000),
                                   borderRadius: BorderRadius.all(
                                     Radius.circular(20),
                                   ),
@@ -104,7 +105,7 @@ class _BakasPageState extends State<BakasPage> {
                               margin: EdgeInsets.fromLTRB(20, 20, 20, 5),
                               padding: EdgeInsets.all(30),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF910D0D),
+                                color: const Color(0xFF8B0000),
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(20),
                                 ),

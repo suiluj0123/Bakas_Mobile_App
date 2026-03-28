@@ -39,4 +39,24 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.put('/:id', async (req, res) => {
+  try {
+    const success = await drawModel.updateDraw(req.params.id, req.body);
+    if (!success) return res.status(404).json({ ok: false, message: 'Draw not found' });
+    res.json({ ok: true, message: 'Draw updated' });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: error.message });
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const success = await drawModel.deleteDraw(req.params.id);
+    if (!success) return res.status(404).json({ ok: false, message: 'Draw not found' });
+    res.json({ ok: true, message: 'Draw deleted' });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: error.message });
+  }
+});
+
 module.exports = router;

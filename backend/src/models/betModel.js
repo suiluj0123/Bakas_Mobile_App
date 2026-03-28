@@ -12,10 +12,11 @@ async function createBet({ player_id, group_id, system_id, lotterytype_id, drawd
 
 async function getBetsByPlayer(playerId) {
   const [rows] = await pool.execute(
-    `SELECT b.*, l.name as lottery_name, d.draw_date
+    `SELECT b.*, l.name as lottery_name, d.draw_date, g.lotterytype_id as group_type, g.name as group_name
      FROM bets b
      LEFT JOIN lotteries l ON b.lotterytype_id = l.id
      LEFT JOIN draws d ON b.drawdate_id = d.id
+     LEFT JOIN \`groups\` g ON b.group_id = g.id
      WHERE b.player_id = ? AND b.deleted_at IS NULL
      ORDER BY b.created_at DESC`,
     [playerId]

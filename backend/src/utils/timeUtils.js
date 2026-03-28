@@ -1,5 +1,4 @@
 
-
 function getPHTime() {
   const now = new Date();
   const phOffset = 8 * 60 * 60 * 1000;
