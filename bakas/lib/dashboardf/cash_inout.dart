@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../dashboard.dart';
 import 'app_drawer.dart';
+import '../services/formatter.dart';
+import '../services/session_service.dart';
 
 class CashInOutPage extends StatefulWidget {
   final int? playerId;
@@ -51,14 +54,15 @@ class _CashInOutPageState extends State<CashInOutPage> {
   }
 
   Future<void> _fetchWalletStats() async {
-    if (widget.playerId == null) {
+    final effectivePlayerId = widget.playerId ?? SessionService().playerId;
+    if (effectivePlayerId == null) {
       setState(() => _isStatsLoading = false);
       return;
     }
 
     try {
       final res = await http.get(
-        Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=${widget.playerId}'),
+        Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=$effectivePlayerId'),
       );
 
       if (res.statusCode == 200) {
@@ -272,7 +276,7 @@ class _CashInOutPageState extends State<CashInOutPage> {
                       child: _SummaryTile(
                         icon: Icons.account_balance_wallet_outlined,
                         label: 'Total Balance',
-                        value: _isStatsLoading ? 'Loading...' : 'Php ${_balance.toStringAsFixed(2)}',
+                        value: _isStatsLoading ? 'Loading...' : CurrencyFormatter.format(_balance),
                       ),
                     ),
                     Container(
@@ -285,7 +289,7 @@ class _CashInOutPageState extends State<CashInOutPage> {
                       child: _SummaryTile(
                         icon: Icons.south_west,
                         label: 'Cash In monthly\nlimit remaining',
-                        value: _isStatsLoading ? 'Loading...' : 'Php ${_cashInLimit.toStringAsFixed(2)}',
+                        value: _isStatsLoading ? 'Loading...' : CurrencyFormatter.format(_cashInLimit),
                       ),
                     ),
                   ],
@@ -518,7 +522,7 @@ class _CashInOutPageState extends State<CashInOutPage> {
               onPressed: () {
                 _amountController.text = _presets[index].toString();
               },
-              child: Text('PHP ${_presets[index]}'),
+              child: Text("PHP ${NumberFormat('#,###').format(_presets[index])}"),
             );
           },
         ),

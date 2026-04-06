@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/formatter.dart';
 
 class ResultsUI extends StatefulWidget {
   final int? playerId;
@@ -100,7 +101,7 @@ class _ResultsUIState extends State<ResultsUI> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text("Jackpot: PHP ${r['prize'] ?? '0.00'}", 
+                                    Text("Jackpot: ${CurrencyFormatter.formatJackpot(r['prize'])}", 
                                       style: const TextStyle(color: Color(0xFF8B0000), fontWeight: FontWeight.bold)),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

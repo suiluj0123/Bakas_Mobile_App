@@ -215,6 +215,19 @@ async function updatePlayerPassword(email, hashedPassword) {
   return resultPlayers;
 }
 
+async function searchPlayers(query) {
+  const searchQuery = `%${query}%`;
+  const [rows] = await pool.execute(
+    `SELECT id, first_name, last_name, email, code 
+     FROM players 
+     WHERE (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)
+     AND deleted_at IS NULL
+     LIMIT 20`,
+    [searchQuery, searchQuery, searchQuery]
+  );
+  return rows;
+}
+
 module.exports = {
   findUserByEmail,
   findPlayerByNameAndBirthdate,
@@ -226,4 +239,5 @@ module.exports = {
   findResetToken,
   deleteResetToken,
   updatePlayerPassword,
+  searchPlayers,
 };

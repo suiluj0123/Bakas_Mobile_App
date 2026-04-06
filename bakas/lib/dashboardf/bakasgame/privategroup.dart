@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../widgets/BakasHeader.dart';
 import '../../widgets/WhiteContainer.dart';
 import '../../widgets/backgroundRed.dart';
@@ -175,11 +176,153 @@ class _privateGroupPageState extends State<privateGroupPage> {
                 }
               );
             }),
-            _actionButton(dialogContext, "Members", () => Navigator.pop(dialogContext)),
-            _actionButton(dialogContext, "Invite", () => Navigator.pop(dialogContext)),
+            _actionButton(dialogContext, "Members", () {
+              Navigator.pop(dialogContext);
+              _showMembersDialog(group);
+            }),
+            _actionButton(dialogContext, "Invite", () {
+              Navigator.pop(dialogContext);
+              _showInviteDialog(group);
+            }),
             _actionButton(dialogContext, "Chat", () => Navigator.pop(dialogContext)),
             _actionButton(dialogContext, "Delete", () => Navigator.pop(dialogContext), isDelete: true),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showMembersDialog(Map<String, dynamic> group) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Group Members"),
+        content: FutureBuilder<http.Response>(
+          future: http.get(Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/members')),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return SizedBox(height: 100, child: Center(child: CircularProgressIndicator()));
+            }
+            if (snapshot.hasError || snapshot.data?.statusCode != 200) {
+              return Text("Error loading members");
+            }
+            final payload = jsonDecode(snapshot.data!.body);
+            final members = payload['data'] as List<dynamic>;
+            return SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: members.length,
+                itemBuilder: (context, index) {
+                  final m = members[index];
+                  return ListTile(
+                    leading: CircleAvatar(child: Text(m['player_name'][0])),
+                    title: Text(m['player_name'] ?? 'N/A'),
+                    subtitle: Text(m['status'] == 1 ? 'Active' : 'Pending'),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text("Close"))],
+      ),
+    );
+  }
+
+  void _showInviteDialog(Map<String, dynamic> group) {
+    final searchController = TextEditingController();
+    List<dynamic> searchResults = [];
+    bool isSearching = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text("Invite Players"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text("Code: ${group['pgroup_code']}", 
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.copy, size: 20),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: group['pgroup_code']));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Code copied to clipboard"))
+                      );
+                    },
+                  ),
+                ],
+              ),
+              Divider(),
+              TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  labelText: "Search player by name",
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.search),
+                    onPressed: () async {
+                      if (searchController.text.isEmpty) return;
+                      setState(() => isSearching = true);
+                      try {
+                        final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/players/search?q=${searchController.text}'));
+                        if (res.statusCode == 200) {
+                          final payload = jsonDecode(res.body);
+                          setState(() {
+                            searchResults = payload['data'];
+                            isSearching = false;
+                          });
+                        }
+                      } catch (e) {
+                        setState(() => isSearching = false);
+                      }
+                    },
+                  ),
+                ),
+              ),
+              if (isSearching) Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator()),
+              if (!isSearching && searchResults.isNotEmpty)
+                SizedBox(
+                  height: 200,
+                  width: double.maxFinite,
+                  child: ListView.builder(
+                    itemCount: searchResults.length,
+                    itemBuilder: (context, index) {
+                      final p = searchResults[index];
+                      return ListTile(
+                        title: Text("${p['first_name']} ${p['last_name']}"),
+                        trailing: ElevatedButton(
+                          onPressed: () async {
+                            final res = await http.post(
+                              Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/invite'),
+                              headers: {'Content-Type': 'application/json'},
+                              body: jsonEncode({
+                                'player_id': p['id'],
+                                'player_name': "${p['first_name']} ${p['last_name']}",
+                                'invited_by': widget.playerId,
+                              }),
+                            );
+                            if (res.statusCode == 200) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Invitation sent to ${p['first_name']}"))
+                              );
+                            }
+                          },
+                          child: Text("Invite", style: TextStyle(fontSize: 10)),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text("Close"))],
         ),
       ),
     );

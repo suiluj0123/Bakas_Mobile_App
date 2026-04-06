@@ -169,10 +169,13 @@ async function addMember({ pgroup_code, player_id, player_name, user_code, name,
  */
 async function getMembers(pgroupCode) {
   const [rows] = await pool.execute(
-    `SELECT id, pgroup_code, player_id, player_name, user_code, status, created_at
-     FROM private_groups
-     WHERE pgroup_code = ? AND deleted_at IS NULL
-     ORDER BY created_at ASC`,
+    `SELECT pg.id, pg.pgroup_code, pg.player_id, 
+            CONCAT(p.first_name, ' ', p.last_name) as player_name, 
+            pg.user_code, pg.status, pg.created_at
+     FROM private_groups pg
+     INNER JOIN players p ON pg.player_id = p.id
+     WHERE pg.pgroup_code = ? AND pg.deleted_at IS NULL
+     ORDER BY pg.created_at ASC`,
     [pgroupCode]
   );
   return rows;
@@ -184,9 +187,11 @@ async function getMembers(pgroupCode) {
 async function getPendingInvitations(playerId) {
   const [rows] = await pool.execute(
     `SELECT pg.id, pg.pgroup_code, pg.name, pg.\`desc\`, pg.status, pg.created_by, pg.created_at,
-            g.name AS group_name, g.\`desc\` AS group_desc, g.lotterytype_id
+            g.name AS group_name, g.\`desc\` AS group_desc, g.lotterytype_id,
+            CONCAT(p.first_name, ' ', p.last_name) AS invited_by_name
      FROM private_groups pg
      LEFT JOIN \`groups\` g ON pg.pgroup_code = g.pgroup_code
+     LEFT JOIN players p ON pg.created_by = p.id
      WHERE pg.player_id = ? AND pg.status = 2 AND pg.deleted_at IS NULL
      ORDER BY pg.created_at DESC`,
     [playerId]

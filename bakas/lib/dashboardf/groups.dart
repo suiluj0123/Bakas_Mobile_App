@@ -482,78 +482,114 @@ class _GroupsPageState extends State<GroupsPage> {
   }
 
   void showInviteDialog(Map<String, dynamic> group) {
-    final playerIdController = TextEditingController();
+    final searchController = TextEditingController();
+    List<dynamic> searchResults = [];
+    bool isSearching = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text("Invite to ${group['name']}"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Show group code to share
-            Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 15),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF3E0),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.share, size: 18, color: Colors.orange),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "Share code: ${group['pgroup_code'] ?? 'N/A'}",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text("Invite to ${group['name']}"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Show group code to share
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 15),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.share, size: 18, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Code: ${group['pgroup_code'] ?? 'N/A'}",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 18),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: group['pgroup_code'] ?? ''));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Code copied!")),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  labelText: "Search player by name",
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () async {
+                      if (searchController.text.isEmpty) return;
+                      setStateDialog(() => isSearching = true);
+                      try {
+                        final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/players/search?q=${searchController.text}'));
+                        if (res.statusCode == 200) {
+                          final payload = jsonDecode(res.body);
+                          setStateDialog(() {
+                            searchResults = payload['data'];
+                            isSearching = false;
+                          });
+                        }
+                      } catch (e) {
+                        setStateDialog(() => isSearching = false);
+                      }
+                    },
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.copy, size: 18),
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: group['pgroup_code'] ?? ''));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Code copied!"), duration: Duration(seconds: 1)),
+                ),
+              ),
+              if (isSearching) const Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator()),
+              if (!isSearching && searchResults.isNotEmpty)
+                SizedBox(
+                  height: 180,
+                  width: double.maxFinite,
+                  child: ListView.builder(
+                    itemCount: searchResults.length,
+                    itemBuilder: (context, index) {
+                      final p = searchResults[index];
+                      return ListTile(
+                        title: Text("${p['first_name']} ${p['last_name']}"),
+                        trailing: ElevatedButton(
+                          onPressed: () async {
+                            final success = await _invitePlayer(group['id'], p['id']);
+                            if (success && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Invitation sent to ${p['first_name']}")),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(255, 0, 118, 4),
+                            minimumSize: const Size(60, 25),
+                          ),
+                          child: const Text("Invite", style: TextStyle(fontSize: 10)),
+                        ),
                       );
                     },
                   ),
-                ],
-              ),
-            ),
-            TextField(
-              controller: playerIdController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: "Player ID to invite"),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Close"),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final targetId = int.tryParse(playerIdController.text);
-              if (targetId != null) {
-                Navigator.pop(context);
-                final success = await _invitePlayer(group['id'], targetId);
-                if (success && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Invitation sent!"), backgroundColor: Colors.green),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 0, 125, 4),
-            ),
-            child: const Text("Send Invite"),
-          ),
-        ],
       ),
     );
   }

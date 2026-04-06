@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../services/formatter.dart';
+import '../services/session_service.dart';
 
 //pref size widget sa appbar not widget ah
 PreferredSizeWidget myAppBar(String? title) {
@@ -111,15 +113,16 @@ class _PlayerBalanceWidgetState extends State<PlayerBalanceWidget> {
   }
 
   Future<void> _fetchBalance() async {
-    if (widget.playerId == null) {
+    final effectivePlayerId = widget.playerId ?? SessionService().playerId;
+    if (effectivePlayerId == null) {
       if (mounted) setState(() => _isLoading = false);
       return;
     }
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=${widget.playerId}'));
+      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=$effectivePlayerId'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
-        if (payload['ok'] == true) {
+        if (payload['ok'] == true && payload['data'] != null) {
           final bal = payload['data']['balance'];
           if (mounted) {
             setState(() {
@@ -134,6 +137,7 @@ class _PlayerBalanceWidgetState extends State<PlayerBalanceWidget> {
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
+      debugPrint('Error fetching balance: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -155,7 +159,7 @@ class _PlayerBalanceWidgetState extends State<PlayerBalanceWidget> {
           ),
           const SizedBox(height: 5),
           Text(
-            _isLoading ? 'Loading...' : '₱ ${_balance.toStringAsFixed(2)}',
+            _isLoading ? 'Loading...' : CurrencyFormatter.format(_balance),
             style: const TextStyle(
               fontSize: 28,
               fontFamily: 'Montserrat',

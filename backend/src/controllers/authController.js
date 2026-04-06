@@ -246,4 +246,18 @@ async function resetPassword(req, res, next) {
   }
 }
 
-module.exports = { login, register, forgotPassword, resetPassword };
+async function searchPlayers(req, res) {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.status(200).json({ ok: true, data: [] });
+    }
+    const { searchPlayers: searchModel } = require('../models/userModel');
+    const players = await searchModel(q);
+    res.status(200).json({ ok: true, data: players });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: error.message });
+  }
+}
+
+module.exports = { login, register, forgotPassword, resetPassword, searchPlayers };

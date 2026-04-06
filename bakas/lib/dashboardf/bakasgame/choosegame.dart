@@ -9,6 +9,7 @@ import '../../widgets/BakasHeader.dart';
 import '../../widgets/WhiteContainer.dart';
 import '../../widgets/backgroundRed.dart';
 import '../../widgets/BackButton.dart';
+import '../../services/formatter.dart';
 
 class chooseGamePage extends StatefulWidget {
   final String? firstName;
@@ -264,7 +265,7 @@ class _chooseGameState extends State<chooseGamePage> {
                       ),
                     ),
                     Text(
-                      'Prize: PHP ${_drawDetails?['prize'] ?? '0.00'} Jackpot Prize',
+                      'Prize: ${CurrencyFormatter.formatJackpot(_drawDetails?['prize'])} Jackpot Prize',
                       style: TextStyle(
                         fontFamily: 'Montserrat',
                         fontWeight: FontWeight.w500,

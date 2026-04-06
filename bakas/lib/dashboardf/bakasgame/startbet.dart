@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../app_drawer.dart';
+import '../../services/formatter.dart';
 
 import '../../widgets/BakasHeader.dart';
 import '../../widgets/WhiteContainer.dart';
 import '../../widgets/backgroundRed.dart';
 import '../../widgets/BackButton.dart';
+import '../../services/session_service.dart';
 
 class startBetPage extends StatefulWidget {
   final String? firstName;
@@ -58,12 +60,13 @@ class _startBetPageState extends State<startBetPage> {
   }
 
   Future<void> _fetchBalance() async {
-    if (widget.playerId == null) return;
+    final effectivePlayerId = widget.playerId ?? SessionService().playerId;
+    if (effectivePlayerId == null) return;
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=${widget.playerId}'));
+      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=$effectivePlayerId'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
-        if (payload['ok'] == true) {
+        if (payload['ok'] == true && payload['data'] != null) {
           final bal = payload['data']['balance'];
           if (mounted) {
             setState(() {
@@ -324,7 +327,7 @@ class _startBetPageState extends State<startBetPage> {
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('Success'),
-              content: Text('Tickets created! New balance: PHP ${data['newBalance']}'),
+              content: Text('Tickets created! New balance: ${CurrencyFormatter.format(double.tryParse(data['newBalance'].toString()) ?? 0.0)}'),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -383,7 +386,7 @@ class _startBetPageState extends State<startBetPage> {
                       style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      'PHP ${_balance.toStringAsFixed(2)}',
+                      CurrencyFormatter.format(_balance),
                       style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -441,7 +444,7 @@ class _startBetPageState extends State<startBetPage> {
                         ),
                       ),
                       Text(
-                        'Prize: PHP ${_drawDetails?['prize'] ?? '0'} Jackpot Prize',
+                        'Prize: ${CurrencyFormatter.formatJackpot(_drawDetails?['prize'])} Jackpot Prize',
                         style: const TextStyle(
                           fontFamily: 'Montserrat',
                           fontWeight: FontWeight.w500,

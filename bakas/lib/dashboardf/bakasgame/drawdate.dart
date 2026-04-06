@@ -10,6 +10,7 @@ import '../../widgets/BakasHeader.dart';
 import '../../widgets/WhiteContainer.dart';
 import '../../widgets/backgroundRed.dart';
 import '../../widgets/BackButton.dart';
+import '../../services/formatter.dart';
 
 class DrawdatePage extends StatefulWidget {
   final String? firstName;
@@ -29,6 +30,8 @@ class _DrawdatePageState extends State<DrawdatePage> {
   List<dynamic> _myGroups = []; 
   List<dynamic> _myBets = []; 
   Map<int, int> _groupCounts = {}; 
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
 
   String _apiBaseUrl() {
     if (kIsWeb) return 'http://localhost:3001';
@@ -39,6 +42,7 @@ class _DrawdatePageState extends State<DrawdatePage> {
   @override
   void initState() {
     super.initState();
+    _selectedDay = today;
     _fetchUpcomingDraws();
   }
 
@@ -106,6 +110,54 @@ class _DrawdatePageState extends State<DrawdatePage> {
       debugPrint('Error fetching draws or groups: $e');
     }
     setState(() => _isLoading = false);
+  }
+
+  List<dynamic> _getDrawsForDay(DateTime day) {
+    return _availableDraws.where((draw) {
+      if (draw['draw_date'] == null) return false;
+      try {
+        final statusText = _getDisplayStatus(draw['status'], draw['draw_date'], draw['cutoff_date']);
+        if (statusText == 'COMPLETED') return false; // Filter out completed games
+
+        final drawDate = DateTime.parse(draw['draw_date']).toUtc().add(const Duration(hours: 8));
+        return isSameDay(drawDate, day);
+      } catch (e) {
+        return false;
+      }
+    }).toList();
+  }
+
+  Widget _buildCell(DateTime day, Color color, {bool isSelected = false, bool isToday = false}) {
+    return Container(
+      alignment: Alignment.topCenter,
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF8B0000) : Colors.transparent,
+          shape: BoxShape.circle,
+          border: isToday && !isSelected ? Border.all(color: const Color(0xFF8B0000), width: 1.5) : null,
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: const Color(0xFF8B0000).withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            )
+          ] : null,
+        ),
+        child: Text(
+          '${day.day}',
+          style: TextStyle(
+            color: isSelected ? Colors.white : (isToday ? const Color(0xFF8B0000) : color),
+            fontWeight: (isSelected || isToday) ? FontWeight.w900 : FontWeight.w700,
+            fontSize: 15,
+            fontFamily: 'Montserrat',
+          ),
+        ),
+      ),
+    );
   }
 
   Color _getStatusColor(String? status) {
@@ -370,7 +422,7 @@ class _DrawdatePageState extends State<DrawdatePage> {
                       _cardDetail("Draw date", drawDate, isBold: true),
                       _cardDetail("Cutoff date", cutoffDate, isBold: true),
                       _cardDetail("Time left", timeLeft, color: Colors.blue),
-                      _cardDetail("Prize", "PHP $prize Jackpot Prize", color: Colors.grey[700]),
+                      _cardDetail("Prize", "${CurrencyFormatter.formatJackpot(prize)} Jackpot Prize", color: Colors.grey[700]),
                       const SizedBox(height: 5),
                       _cardDetailRow("Group Total", "$groupCount Group(s)"),
                       _cardDetailRow(
@@ -472,91 +524,7 @@ class _DrawdatePageState extends State<DrawdatePage> {
   }
 
 
-  Widget availableGame(int index) {
-    if (index >= _availableDraws.length) return const SizedBox();
-    final draw = _availableDraws[index];
-    
-    String dateStr = _formatDate(draw['draw_date']);
-    
-    final statusText = _getDisplayStatus(draw['status'], draw['draw_date'], draw['cutoff_date']);
 
-    return GestureDetector(
-      onTap: () {
-        if (statusText == 'COMPLETED') {
-          _showResultsModal(context, draw);
-        } else {
-          myModalDD(context, draw);
-        }
-      },
-      child: Container(
-        margin: const EdgeInsets.all(5),
-        decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 255, 255, 255),
-          border: Border.all(
-            color: const Color.fromARGB(255, 255, 255, 255),
-            width: 1,
-          ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                dateStr,
-                style: const TextStyle(
-                  fontFamily: 'Montserrat',
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                  color: Color(0xFF8B0000),
-                ),
-              ),
-              Text(
-                draw['game_name'] ?? 'Unknown Game',
-                style: const TextStyle(
-                  fontFamily: 'Montserrat',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                  color: Colors.black,
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Prize: PHP ${draw['prize'] ?? 0}',
-                    style: const TextStyle(
-                      fontFamily: 'Montserrat',
-                      fontWeight: FontWeight.w400,
-                      fontSize: 12,
-                      color: Colors.black,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(statusText).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: _getStatusColor(statusText))
-                    ),
-                    child: Text(
-                      statusText,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: _getStatusColor(statusText)
-                      )
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
   //modal i2 🙈
   Future<void> myModalDD(BuildContext context, dynamic draw) {
     return showDialog<void>(
@@ -672,80 +640,188 @@ class _DrawdatePageState extends State<DrawdatePage> {
   }
 
   Widget _buildCalendarView() {
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(15, 5, 0, 0),
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: myBackbutton(),
-          ),
-        ),
-        const Text(
-          'Choose a draw date',
-          style: TextStyle(
-            fontSize: 25,
-            fontFamily: 'Montserrat',
-            fontWeight: FontWeight.w800,
-            wordSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          margin: const EdgeInsets.fromLTRB(20, 5, 30, 10),
-          padding: const EdgeInsets.fromLTRB(15, 0, 15, 15),
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(color: Colors.grey.shade300, width: 1),
-              bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.fromLTRB(15, 5, 0, 0),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: myBackbutton(),
             ),
           ),
-          child: TableCalendar(
-            locale: 'en_US',
-            rowHeight: 45,
-            headerStyle: const HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-              titleTextStyle: TextStyle(
-                fontFamily: 'Montserrat',
-                fontWeight: FontWeight.w800,
-                fontSize: 15,
+          const Text(
+            'Choose a draw date',
+            style: TextStyle(
+              fontSize: 25,
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w800,
+              wordSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            margin: const EdgeInsets.fromLTRB(10, 5, 10, 10),
+            padding: const EdgeInsets.fromLTRB(5, 0, 5, 15),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: Colors.grey.shade300, width: 1),
+                bottom: BorderSide(color: Colors.grey.shade300, width: 1),
               ),
             ),
-            daysOfWeekStyle: const DaysOfWeekStyle(
-              weekdayStyle: TextStyle(
-                color: Colors.black,
-                fontFamily: 'Montserrat',
-                fontWeight: FontWeight.w600,
+            child: TableCalendar(
+              locale: 'en_US',
+              rowHeight: 90, 
+              daysOfWeekHeight: 30,
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+                titleTextStyle: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
               ),
-              weekendStyle: TextStyle(
-                color: Color(0xFF8B0000),
-                fontFamily: 'Montserrat',
-                fontWeight: FontWeight.w600,
+              daysOfWeekStyle: const DaysOfWeekStyle(
+                weekdayStyle: TextStyle(
+                  color: Colors.black,
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+                weekendStyle: TextStyle(
+                  color: Color(0xFF8B0000),
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
               ),
+              calendarStyle: const CalendarStyle(
+                todayDecoration: BoxDecoration(color: Colors.transparent),
+                selectedDecoration: BoxDecoration(color: Colors.transparent),
+                markerDecoration: BoxDecoration(color: Colors.transparent),
+                markersAlignment: Alignment.bottomCenter,
+                outsideDaysVisible: false,
+              ),
+              calendarBuilders: CalendarBuilders(
+              defaultBuilder: (context, day, focusedDay) {
+                return _buildCell(day, Colors.black);
+              },
+              selectedBuilder: (context, day, focusedDay) {
+                return _buildCell(day, Colors.white, isSelected: true);
+              },
+              todayBuilder: (context, day, focusedDay) {
+                return _buildCell(day, Colors.white, isToday: true);
+              },
+              markerBuilder: (context, day, events) {
+                if (events.isEmpty) return const SizedBox();
+                return Positioned(
+                  bottom: 6,
+                  left: 2,
+                  right: 2,
+                  child: Column(
+                    children: events.take(2).map((event) {
+                      final draw = event as dynamic;
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: const Color(0xFF8B0000).withOpacity(0.15), width: 0.8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 2,
+                              offset: const Offset(0, 1),
+                            )
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              (draw['game_name'] ?? 'Game').toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF8B0000),
+                                letterSpacing: -0.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.visible,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 1),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                CurrencyFormatter.formatJackpot(draw['prize']),
+                                style: TextStyle(
+                                  fontSize: 7,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey[600],
+                                  letterSpacing: -0.2,
+                                ),
+                                maxLines: 1,
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                );
+              },
             ),
-            calendarStyle: const CalendarStyle(
-              todayDecoration: BoxDecoration(color: Color(0xFF8B0000)),
-              selectedDecoration: BoxDecoration(color: Color.fromARGB(255, 177, 71, 71)),
+              firstDay: DateTime.utc(2020),
+              lastDay: today.add(const Duration(days: 365)), 
+              focusedDay: _focusedDay,
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              onDaySelected: (selectedDay, focusedDay) {
+                final events = _getDrawsForDay(selectedDay);
+                setState(() {
+                  _selectedDay = selectedDay;
+                  _focusedDay = focusedDay;
+                });
+                
+                // If there's exactly one game, show the modal directly
+                if (events.length == 1) {
+                  final draw = events.first;
+                  final statusText = _getDisplayStatus(draw['status'], draw['draw_date'], draw['cutoff_date']);
+                  if (statusText != 'COMPLETED') {
+                    myModalDD(context, draw);
+                  }
+                }
+              },
+              eventLoader: _getDrawsForDay,
             ),
-            firstDay: DateTime.utc(2020),
-            lastDay: today,
-            focusedDay: DateTime.now(),
           ),
-        ),
-        Expanded(
-          child: _isLoading
+          _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : _availableDraws.isEmpty
-                  ? const Center(child: Text("No upcoming games found."))
-                  : ListView.builder(
-                      itemCount: _availableDraws.length,
-                      itemBuilder: (context, index) {
-                        return availableGame(index);
-                      },
-                    ),
-        ),
-      ],
+              : Builder(
+                  builder: (context) {
+                    final filteredDraws = _selectedDay == null ? [] : _getDrawsForDay(_selectedDay!);
+                    if (filteredDraws.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Center(
+                          child: Text(
+                            "No games scheduled for this date.",
+                            style: TextStyle(fontFamily: 'Montserrat', color: Colors.grey),
+                          ),
+                        ),
+                      );
+                    }
+                    return Column(
+                      children: filteredDraws.map((draw) => _buildDrawCard(draw)).toList(),
+                    );
+                  },
+                ),
+          const SizedBox(height: 20),
+        ],
+      ),
     );
   }
 }

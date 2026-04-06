@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../services/formatter.dart';
 
 class OperatorDashboardUI extends StatefulWidget {
   final int? operatorId;
@@ -552,7 +553,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
                       return Card(
                         child: ListTile(
                           title: Text(l['name']),
-                          subtitle: Text("Jackpot: PHP ${l['prize']}"),
+                          subtitle: Text("Jackpot: ${CurrencyFormatter.formatJackpot(l['prize'])}"),
                           trailing: IconButton(
                             icon: const Icon(Icons.edit),
                             onPressed: () => _showEditLotteryDialog(l),

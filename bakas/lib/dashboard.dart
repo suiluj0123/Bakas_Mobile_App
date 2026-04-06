@@ -9,22 +9,9 @@ import 'dashboardf/history.dart';
 import 'dashboardf/grouprequest.dart';
 import 'dashboardf/app_drawer.dart';
 import 'services/session_service.dart';
+import 'services/formatter.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: DashboardUI(),
-    );
-  }
-}
+// DashboardUI widget definition starts here
 
 class DashboardUI extends StatefulWidget {
   final String? firstName;
@@ -79,7 +66,7 @@ class _DashboardUIState extends State<DashboardUI> {
 
       if (res.statusCode == 200) {
         final payload = (res.body.isNotEmpty ? (jsonDecode(res.body) as Map<String, dynamic>) : <String, dynamic>{});
-        if (payload['ok'] == true) {
+        if (payload['ok'] == true && payload['data'] != null) {
           if (mounted) {
             setState(() {
               final bal = payload['data']['balance'];
@@ -212,7 +199,7 @@ class _DashboardUIState extends State<DashboardUI> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      _isLoading ? "Loading..." : "Php ${_balance.toStringAsFixed(2)}",
+                      _isLoading ? "Loading..." : CurrencyFormatter.format(_balance),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,

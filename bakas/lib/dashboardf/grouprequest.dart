@@ -232,7 +232,7 @@ class _GroupRequestPageState extends State<GroupRequestPage> {
           ),
           const SizedBox(height: 3),
           Text(
-            "Invited by: Player #$invitedBy",
+            "Invited by: ${inv['invited_by_name'] ?? 'Player #${inv['created_by']}'}",
             style: const TextStyle(fontSize: 13, color: Colors.black54),
           ),
           const SizedBox(height: 3),
