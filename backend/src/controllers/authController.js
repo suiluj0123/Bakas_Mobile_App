@@ -102,7 +102,17 @@ async function register(req, res, next) {
       email,
       birthdate,
       password,
+      id_code, // Added field for ID type
     } = req.body ?? {};
+
+    const idPhotoFile = (req.files && req.files['id_photo']) ? req.files['id_photo'][0] : null;
+    const selfiePhotoFile = (req.files && req.files['selfie_photo']) ? req.files['selfie_photo'][0] : null;
+
+    const idPhotoPath = idPhotoFile ? `uploads/ids/${idPhotoFile.filename}` : null;
+    const selfiePhotoPath = selfiePhotoFile ? `uploads/ids/${selfiePhotoFile.filename}` : null;
+
+    // Combine paths if both exist
+    const combinedIdPhoto = [idPhotoPath, selfiePhotoPath].filter(Boolean).join(',');
 
     const firstName =
       typeof rawFirstName === 'string' ? rawFirstName.trim() : '';
@@ -133,6 +143,13 @@ async function register(req, res, next) {
       });
     }
 
+    if (!idPhotoFile || !selfiePhotoFile) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Both Government ID and Selfie verification photos are required for registration.',
+      });
+    }
+
     const existingByEmail = await findPlayerByEmail(rawEmail);
     if (existingByEmail) {
       return res
@@ -160,6 +177,8 @@ async function register(req, res, next) {
       email: rawEmail,
       birthdate,
       password: hashedPassword,
+      id_photo: combinedIdPhoto,
+      id_code: id_code || 'PH Government ID',
     });
 
     return res.status(200).json({

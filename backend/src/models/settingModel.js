@@ -71,7 +71,18 @@ async function profileUpdate(data) {
 
 //wallet
 async function get_wallet(playerId) {
-    const [rows] = await pool.query('SELECT * FROM wallet WHERE player_id = ?', [playerId]);
+    const [rows] = await pool.query(`
+        SELECT 
+            pw.id as walletId, 
+            pw.player_id, 
+            pw.wallet_id, 
+            pw.account_number as wallet_number, 
+            wt.name as wallet_type,
+            pw.link_status
+        FROM player_wallets pw
+        JOIN wallet_types wt ON pw.wallet_id = wt.id
+        WHERE pw.player_id = ? AND pw.deleted_at IS NULL
+    `, [playerId]);
 
     if (!rows || rows.length === 0) return null;
     return rows;
@@ -79,23 +90,39 @@ async function get_wallet(playerId) {
 
 async function add_wallet(data) {
     const { playerId,
-            wallet_name,
             wallet_type,
-            wallet_number,
-            balance
+            wallet_number
         } = data;
 
-    const [result] = await pool.query('INSERT INTO wallet (wallet_name, wallet_type, wallet_number, balance, player_id) VALUES (?, ?, ?, ?, ?)'
-        , [wallet_name, wallet_type, wallet_number, balance, playerId]);
+    if (!playerId) {
+        throw new Error('Player ID is required to add a wallet');
+    }
+
+    // 1. Find the wallet_id from wallet_types based on name
+    const [types] = await pool.query('SELECT id FROM wallet_types WHERE name = ? LIMIT 1', [wallet_type]);
+    if (!types || types.length === 0) {
+        throw new Error(`Wallet type "${wallet_type}" not found in database`);
+    }
+    const walletId = types[0].id;
+
+    // 2. Insert into player_wallets
+    const [result] = await pool.query(
+        `INSERT INTO player_wallets (player_id, wallet_id, account_number, link_status, created_by, created_at) 
+         VALUES (?, ?, ?, 1, ?, NOW())`,
+        [playerId, walletId, wallet_number, playerId]
+    );
 
     if (!result || result.affectedRows === 0) return null;
     return result;
 }
 
-async function edit_wallet(playerId, walletId, wallet_number) {
-    const [result] = await pool.query(`UPDATE wallet 
-                                       SET wallet_number = ?
-                                       WHERE player_id = ? AND id = ?`, [wallet_number, playerId, walletId]);
+async function edit_wallet(playerId, playerWalletId, wallet_number) {
+    const [result] = await pool.query(`
+        UPDATE player_wallets 
+        SET account_number = ?, updated_by = ?, updated_at = NOW()
+        WHERE player_id = ? AND id = ?`, 
+        [wallet_number, playerId, playerId, playerWalletId]
+    );
     if (!result) return null;
     return result;
 }

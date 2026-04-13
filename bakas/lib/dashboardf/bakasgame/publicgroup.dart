@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +11,8 @@ import '../../widgets/backgroundRed.dart';
 import '../../widgets/BackButton.dart';
 import '../app_drawer.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
 
 class publicGroupPage extends StatefulWidget {
   final int? playerId;
@@ -28,6 +32,8 @@ class _publicGroupPageState extends State<publicGroupPage> {
   bool _isLoading = true;
   Map<String, dynamic>? _drawDetails;
   bool _isLoadingDraw = true;
+  Timer? _chatTimer;
+
 
   String _apiBaseUrl() {
     if (kIsWeb) return 'http://localhost:3001';
@@ -43,6 +49,13 @@ class _publicGroupPageState extends State<publicGroupPage> {
       _fetchDrawDetails();
     });
   }
+
+  @override
+  void dispose() {
+    _chatTimer?.cancel();
+    super.dispose();
+  }
+
 
   Future<void> _fetchDrawDetails() async {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -181,8 +194,15 @@ class _publicGroupPageState extends State<publicGroupPage> {
               Navigator.pop(dialogContext);
               _showInviteDialog(group);
             }),
-            _actionButton(context, "Chat", () => Navigator.pop(context)),
+            _actionButton(dialogContext, "Chat", () {
+              Navigator.pop(dialogContext);
+              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+              final int? playerId = widget.playerId ?? args?['playerId'];
+              _showChatDialog(group, playerId);
+            }),
             _actionButton(context, "Delete", () => Navigator.pop(context), isDelete: true),
+
+
           ],
         ),
       ),
@@ -226,6 +246,204 @@ class _publicGroupPageState extends State<publicGroupPage> {
       ),
     );
   }
+
+  String _formatTime(String? timestamp) {
+    if (timestamp == null) return "";
+    try {
+      DateTime dt = DateTime.parse(timestamp).toLocal();
+      return DateFormat('hh:mm a').format(dt);
+    } catch (e) {
+      return "";
+    }
+  }
+
+  void _showChatDialog(Map<String, dynamic> group, int? playerId) {
+
+    final TextEditingController messageController = TextEditingController();
+    List<dynamic> messages = [];
+    bool isSending = false;
+
+    if (playerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: Player ID not found")));
+      return;
+    }
+
+
+    void fetchMessages(StateSetter setDialogState) async {
+      try {
+        final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/messages'));
+        if (res.statusCode == 200) {
+          final payload = jsonDecode(res.body);
+          if (mounted) {
+            setDialogState(() {
+              messages = payload['data'];
+            });
+          }
+        } else {
+          debugPrint('Error: status ${res.statusCode}');
+        }
+      } catch (e) {
+        debugPrint('Error fetching chat: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Connection error: Could not load messages")));
+        }
+      }
+
+    }
+
+    _chatTimer?.cancel();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            if (_chatTimer == null || !_chatTimer!.isActive) {
+              fetchMessages(setDialogState);
+              _chatTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+                fetchMessages(setDialogState);
+              });
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  Icon(Icons.chat_bubble, color: Color(0xFF8B0000)),
+                  SizedBox(width: 10),
+                  Expanded(child: Text("Chat: ${group['name']}", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    height: 300,
+                    width: double.maxFinite,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: messages.isEmpty
+                        ? Center(child: Text("No messages yet", style: TextStyle(color: Colors.grey)))
+                        : ListView.builder(
+                            reverse: false, 
+                            itemCount: messages.length,
+                            itemBuilder: (context, index) {
+                              final msg = messages[index];
+                              final bool isMe = msg['sender_id'].toString() == playerId.toString();
+                              return Padding(
+
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                child: Column(
+                                  crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (!isMe) ...[
+                                          Text(
+                                            msg['sender_name'] ?? "Unknown",
+                                            style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.bold),
+                                          ),
+                                          SizedBox(width: 5),
+                                        ],
+                                        Text(
+                                          _formatTime(msg['created_at']),
+                                          style: TextStyle(fontSize: 9, color: Colors.grey[400]),
+                                        ),
+                                        if (isMe) ...[
+                                          SizedBox(width: 5),
+                                          Text(
+                                            "You",
+                                            style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    Container(
+
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: isMe ? Color(0xFF8B0000) : Colors.white,
+                                        borderRadius: BorderRadius.circular(15),
+                                        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2)],
+                                      ),
+                                      child: Text(
+                                        msg['message'] ?? '',
+                                        style: TextStyle(color: isMe ? Colors.white : Colors.black87),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: messageController,
+                          decoration: InputDecoration(
+                            hintText: "Type a message...",
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 5),
+                      isSending
+                          ? CircularProgressIndicator(strokeWidth: 2)
+                          : IconButton(
+                              icon: Icon(Icons.send, color: Color(0xFF8B0000)),
+                              onPressed: () async {
+                                if (messageController.text.trim().isEmpty) return;
+                                setDialogState(() => isSending = true);
+                                try {
+                                  final res = await http.post(
+                                    Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/messages'),
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: jsonEncode({
+                                      'senderId': playerId,
+                                      'message': messageController.text.trim(),
+                                    }),
+                                  );
+
+                                  if (res.statusCode == 201) {
+                                    messageController.clear();
+                                    fetchMessages(setDialogState);
+                                  }
+                                } catch (e) {
+                                  debugPrint('Send error: $e');
+                                } finally {
+                                  setDialogState(() => isSending = false);
+                                }
+                              },
+                            ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    _chatTimer?.cancel();
+                    Navigator.pop(context);
+                  },
+                  child: Text("Close"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((_) {
+      _chatTimer?.cancel();
+    });
+  }
+
 
   void _showInviteDialog(Map<String, dynamic> group) {
     final searchController = TextEditingController();
@@ -302,9 +520,10 @@ class _publicGroupPageState extends State<publicGroupPage> {
                               body: jsonEncode({
                                 'player_id': p['id'],
                                 'player_name': "${p['first_name']} ${p['last_name']}",
-                                'invited_by': widget.playerId,
+                                'invited_by': widget.playerId ?? (ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?)?['playerId'],
                               }),
                             );
+
                             if (res.statusCode == 200) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text("Invitation sent to ${p['first_name']}"))
@@ -444,9 +663,10 @@ class _publicGroupPageState extends State<publicGroupPage> {
                     'group_type': 'Public',
                     'status': 'Active',
                     'drawdate_id': drawId,
-                    'created_by': widget.playerId,
+                    'created_by': widget.playerId ?? (ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?)?['playerId'],
                   }),
                 );
+
                 if (res.statusCode == 201) {
                   _fetchPublicGroups();
                   Navigator.pop(context);

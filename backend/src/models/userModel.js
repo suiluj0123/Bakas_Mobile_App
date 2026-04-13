@@ -30,7 +30,7 @@ async function findPlayerByEmail(email) {
   return rows[0];
 }
 
-async function createPlayer({ firstName, lastName, email, birthdate, password }) {
+async function createPlayer({ firstName, lastName, email, birthdate, password, id_photo, id_code }) {
 
   const code = `PLR-${Date.now()}`;
 
@@ -82,9 +82,9 @@ async function createPlayer({ firstName, lastName, email, birthdate, password })
       null,
       null,
       null,
-      empty,
+      id_code || empty,
       null,
-      empty,
+      id_photo || empty,
       email,
       empty,
       1,

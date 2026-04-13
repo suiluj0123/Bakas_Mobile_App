@@ -27,6 +27,8 @@ class _CashInOutPageState extends State<CashInOutPage> {
   bool _isCashIn = true;
   String? _selectedMethod; 
   String? _selectedProvider; 
+  List<dynamic> _linkedWallets = [];
+  bool _isWalletsLoading = true;
 
   final _amountController = TextEditingController();
   final _cardNumberController = TextEditingController();
@@ -51,6 +53,7 @@ class _CashInOutPageState extends State<CashInOutPage> {
   void initState() {
     super.initState();
     _fetchWalletStats();
+    _fetchLinkedWallets();
   }
 
   Future<void> _fetchWalletStats() async {
@@ -93,7 +96,32 @@ class _CashInOutPageState extends State<CashInOutPage> {
     } catch (e) {
       debugPrint('Error fetching stats: $e');
       _showError('Connection error: Check your internet or server');
-      setState(() => _isStatsLoading = false);
+    } finally {
+      if (mounted) setState(() => _isStatsLoading = false);
+    }
+  }
+
+  Future<void> _fetchLinkedWallets() async {
+    final effectivePlayerId = widget.playerId ?? SessionService().playerId;
+    if (effectivePlayerId == null) {
+      setState(() => _isWalletsLoading = false);
+      return;
+    }
+    try {
+      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/wallet/$effectivePlayerId'));
+      if (res.statusCode == 200) {
+        final payload = jsonDecode(res.body);
+        if (payload['ok'] == true) {
+          setState(() {
+            _linkedWallets = payload['data'] ?? [];
+            _isWalletsLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching wallets in CashInOut: $e');
+    } finally {
+      if (mounted) setState(() => _isWalletsLoading = false);
     }
   }
 
@@ -108,7 +136,13 @@ class _CashInOutPageState extends State<CashInOutPage> {
   }
 
   Future<void> _processTransaction() async {
-    if (widget.playerId == null) return;
+    final effectivePlayerId = widget.playerId ?? SessionService().playerId;
+    if (effectivePlayerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: No active session. Please login again.')),
+      );
+      return;
+    }
 
     final amountText = _amountController.text.trim();
     if (amountText.isEmpty) {
@@ -441,37 +475,79 @@ class _CashInOutPageState extends State<CashInOutPage> {
   }
 
   Widget _buildMethodSelectionView() {
+    if (_isWalletsLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Find specific wallets
+    final gcash = _linkedWallets.firstWhere((w) => w['wallet_type'] == 'GCash', orElse: () => null);
+    final maya = _linkedWallets.firstWhere((w) => w['wallet_type'] == 'Maya', orElse: () => null);
+
     return Column(
       children: [
         _buildHeader(_isCashIn ? 'Cash In' : 'Cash Out'),
-        _PaymentMethodCard(
-          imagePath: 'assets/gcash.png',
-          name: 'GCash',
-          subtitle: 'Ju****e C.',
-          trailing: '•••• •••• 123',
-          color: const Color(0xFF007DFE),
-          onTap: () {
-            setState(() {
-              _selectedProvider = 'gcash';
-              _currentState = CashState.amountInput;
-            });
-          },
-        ),
+        if (gcash != null)
+          _PaymentMethodCard(
+            imagePath: 'assets/gcash.png',
+            name: 'GCash',
+            subtitle: SecurityFormatter.maskName(gcash['wallet_name']),
+            trailing: SecurityFormatter.maskAccountNumber(gcash['wallet_number']),
+            color: const Color(0xFF007DFE),
+            onTap: () {
+              setState(() {
+                _selectedProvider = 'gcash';
+                _currentState = CashState.amountInput;
+              });
+            },
+          )
+        else
+          _buildLinkPlaceholder('GCash', const Color(0xFF007DFE)),
         const SizedBox(height: 20),
-        _PaymentMethodCard(
-          imagePath: 'assets/maya.jpg',
-          name: 'Maya',
-          subtitle: 'Ju****e C.',
-          trailing: '•••• •••• 456',
-          color: const Color(0xFF00C853),
-          onTap: () {
-            setState(() {
-              _selectedProvider = 'maya';
-              _currentState = CashState.amountInput;
-            });
-          },
-        ),
+        if (maya != null)
+          _PaymentMethodCard(
+            imagePath: 'assets/maya.jpg',
+            name: 'Maya',
+            subtitle: SecurityFormatter.maskName(maya['wallet_name']),
+            trailing: SecurityFormatter.maskAccountNumber(maya['wallet_number']),
+            color: const Color(0xFF00C853),
+            onTap: () {
+              setState(() {
+                _selectedProvider = 'maya';
+                _currentState = CashState.amountInput;
+              });
+            },
+          )
+        else
+          _buildLinkPlaceholder('Maya', const Color(0xFF00C853)),
       ],
+    );
+  }
+
+  Widget _buildLinkPlaceholder(String type, Color color) {
+    return InkWell(
+      onTap: () {
+        Navigator.pushNamed(context, '/wallet', arguments: {
+          'firstName': widget.firstName,
+          'playerId': widget.playerId,
+        });
+      },
+      child: Container(
+        height: 120,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color, style: BorderStyle.none),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.link, color: color, size: 32),
+            const SizedBox(height: 8),
+            Text("Link $type Card", style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
     );
   }
 

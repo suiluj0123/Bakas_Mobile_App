@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../app_drawer.dart';
+import '../../services/session_service.dart';
 import '/widgets/BakasHeader.dart';
 import '/widgets/WhiteContainer.dart';
 import '/widgets/backgroundRed.dart';
@@ -22,7 +23,9 @@ class _walletPageState extends State<walletPage> {
   bool _isLoading = true;
 
   final _accountNumberController = TextEditingController();
+  final _accountNameController = TextEditingController();
   String _selectedWalletType = "GCash";
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -33,6 +36,7 @@ class _walletPageState extends State<walletPage> {
   @override
   void dispose() {
     _accountNumberController.dispose();
+    _accountNameController.dispose();
     super.dispose();
   }
 
@@ -43,12 +47,14 @@ class _walletPageState extends State<walletPage> {
   }
 
   Future<void> _fetchWallets() async {
-    if (widget.playerId == null) {
+    final effectivePlayerId = widget.playerId ?? SessionService().playerId;
+    if (effectivePlayerId == null) {
+      debugPrint('Error: fetchWallets failed because playerId is null');
       if (mounted) setState(() => _isLoading = false);
       return;
     }
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/wallet/${widget.playerId}'));
+      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/wallet/$effectivePlayerId'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {
@@ -67,14 +73,31 @@ class _walletPageState extends State<walletPage> {
   }
 
   Future<void> _addWallet() async {
-    if (_accountNumberController.text.isEmpty) return;
+    if (_accountNumberController.text.isEmpty || _accountNameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all required fields')),
+      );
+      return;
+    }
+
+    final effectivePlayerId = widget.playerId ?? SessionService().playerId;
+    if (effectivePlayerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: No active session found. Please re-login.')),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    debugPrint('Linking wallet for playerId: $effectivePlayerId');
+    
     try {
       final res = await http.post(
         Uri.parse('${_apiBaseUrl()}/api/settings/addWallet'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'playerId': widget.playerId,
-          'wallet_name': widget.firstName,
+          'playerId': effectivePlayerId,
+          'wallet_name': _accountNameController.text,
           'wallet_type': _selectedWalletType,
           'wallet_number': _accountNumberController.text,
           'balance': 0.0,
@@ -82,11 +105,31 @@ class _walletPageState extends State<walletPage> {
       );
 
       if (res.statusCode == 200) {
-        _fetchWallets();
-        _accountNumberController.clear();
+        final payload = jsonDecode(res.body);
+        if (payload['ok'] == true) {
+          _fetchWallets();
+          _accountNumberController.clear();
+          _accountNameController.clear();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Wallet linked successfully'), backgroundColor: Colors.green),
+            );
+            Navigator.pop(context);
+          }
+        } else {
+          throw payload['message'] ?? 'Failed to link wallet';
+        }
+      } else {
+        throw 'Server error: ${res.statusCode}';
       }
     } catch (e) {
-      debugPrint('Error adding wallet: $e');
+       if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          );
+       }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -187,6 +230,22 @@ class _walletPageState extends State<walletPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Account Name*", style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
+                  const SizedBox(height: 5),
+                  TextField(
+                    controller: _accountNameController,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      hintText: "As it appears on your E-Wallet",
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
               Row(
                 children: [
                   Expanded(
@@ -237,16 +296,15 @@ class _walletPageState extends State<walletPage> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   ElevatedButton(
-                    onPressed: () {
-                      _addWallet();
-                      Navigator.pop(context);
-                    },
+                    onPressed: _isSaving ? null : () => _addWallet(),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                    child: const Text("Save", style: TextStyle(color: Colors.white)),
+                    child: _isSaving 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text("Save", style: TextStyle(color: Colors.white)),
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _isSaving ? null : () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B0000)),
                     child: const Text("Cancel", style: TextStyle(color: Colors.white)),
                   ),

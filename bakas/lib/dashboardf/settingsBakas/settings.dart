@@ -32,6 +32,16 @@ class _settingPageState extends State<settingPage> {
   String? _selectedCity;
   String? _selectedBarangay;
 
+  final List<String> _idTypes = [
+    'UMID',
+    'PhilID (National ID)',
+    "Driver's License",
+    'Passport',
+    'Postal ID',
+    "Voter's ID",
+    'Senior Citizen ID',
+  ];
+
   Future<void> _fetchRegions() async {
     try {
       final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/regions'));
@@ -344,7 +354,16 @@ class _settingPageState extends State<settingPage> {
                     "Identification",
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  editTextTemplate("ID Type", _idTypeController),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: (_idTypeController.text.isNotEmpty && _idTypes.contains(_idTypeController.text)) ? _idTypeController.text : null,
+                    decoration: const InputDecoration(labelText: 'ID Type', border: OutlineInputBorder()),
+                    items: _idTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+                    onChanged: (val) {
+                      setModalState(() => _idTypeController.text = val ?? '');
+                    },
+                  ),
+                  const SizedBox(height: 10),
                   editTextTemplate("ID Number", _idNumberController),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
@@ -485,10 +504,6 @@ class _settingPageState extends State<settingPage> {
                                   fontSize: 26,
                                   fontWeight: FontWeight.bold,
                                 ),
-                              ),
-                              Text(
-                                "User Code: ${_profileData?['code'] ?? ''}",
-                                style: const TextStyle(color: Colors.white60, fontSize: 11),
                               ),
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 15),

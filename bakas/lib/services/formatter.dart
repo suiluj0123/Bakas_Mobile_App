@@ -33,3 +33,35 @@ class CurrencyFormatter {
     }
   }
 }
+
+class SecurityFormatter {
+  static String maskName(String? fullName) {
+    if (fullName == null || fullName.trim().isEmpty) return "User";
+    
+    List<String> parts = fullName.trim().split(' ');
+    String firstName = parts[0];
+    String lastName = parts.length > 1 ? parts.last : "";
+    
+    String maskedFirst = "";
+    if (firstName.length <= 2) {
+      maskedFirst = firstName;
+    } else {
+      maskedFirst = "${firstName.substring(0, 2)}****${firstName[firstName.length - 1]}";
+    }
+    
+    String maskedLast = "";
+    if (lastName.isNotEmpty) {
+      maskedLast = " ${lastName[0]}.";
+    }
+    
+    return "$maskedFirst$maskedLast";
+  }
+
+  static String maskAccountNumber(String? number) {
+    if (number == null || number.isEmpty) return ".... .... ---";
+    String lastThree = number.length > 3 
+        ? number.substring(number.length - 3) 
+        : number;
+    return ".... .... $lastThree";
+  }
+}
