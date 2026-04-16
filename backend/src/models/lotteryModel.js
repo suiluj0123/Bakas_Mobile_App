@@ -35,9 +35,18 @@ async function updateLottery(id, { name, prize, start_range, end_range, number_o
   return result.affectedRows > 0;
 }
 
+async function deleteLottery(id) {
+  const [result] = await pool.execute(
+    `UPDATE lotteries SET deleted_at = NOW(), updated_at = NOW() WHERE id = ?`,
+    [id]
+  );
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   createLottery,
   getAllLotteries,
   getLotteryById,
-  updateLottery
+  updateLottery,
+  deleteLottery
 };

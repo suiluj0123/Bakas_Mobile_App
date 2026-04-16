@@ -446,7 +446,7 @@ class _walletPageState extends State<walletPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(wallet['wallet_name'] ?? widget.firstName ?? "User",
+              Text(wallet['wallet_name'] ?? widget.firstName ?? SessionService().firstName ?? "User",
                   style: const TextStyle(color: Colors.white, fontSize: 16)),
               Text(wallet['wallet_number'] ?? "*******", style: const TextStyle(color: Colors.white, fontSize: 16)),
             ],

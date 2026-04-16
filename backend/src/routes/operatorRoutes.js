@@ -7,6 +7,7 @@ router.post('/login', operatorController.login);
 // Lottery Management
 router.post('/lotteries', operatorController.createLottery);
 router.put('/lotteries/:id', operatorController.updateLottery);
+router.delete('/lotteries/:id', operatorController.deleteLottery);
 
 // Draw Management
 router.post('/draws', operatorController.createDraw);

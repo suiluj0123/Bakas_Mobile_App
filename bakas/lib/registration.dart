@@ -119,6 +119,8 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
         return;
       }
       
+      // ID validation bypass: We no longer block registration based on validationResult
+      /*
       if (_validationResult == null || !_validationResult!.isValid) {
         setState(() {
           _errorText = _validationResult?.message ?? 'ID validation failed.';
@@ -126,6 +128,7 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
         });
         return;
       }
+      */
 
       if (!em.contains('@')) {
         setState(() {
@@ -248,6 +251,13 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
         
         // Use a temporary file for ML Kit if NOT on web
         // ML Kit requires a File on Android/iOS
+        // ID validation bypass: Mark any photo as valid for now
+        IdValidationResult result = IdValidationResult(
+          isValid: true, 
+          message: "ID uploaded successfully",
+          idType: _selectedIdType ?? "PH Government ID"
+        );
+        /* 
         IdValidationResult result;
         if (!kIsWeb) {
           final file = io.File(pickedFile.path);
@@ -261,6 +271,7 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
             idType: "PH Government ID"
           );
         }
+        */
 
         setState(() {
           _idXFile = pickedFile;

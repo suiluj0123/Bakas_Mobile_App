@@ -35,10 +35,11 @@ class CurrencyFormatter {
 }
 
 class SecurityFormatter {
-  static String maskName(String? fullName) {
-    if (fullName == null || fullName.trim().isEmpty) return "User";
+  static String maskName(String? fullName, {String? fallback}) {
+    String? effectiveName = (fullName == null || fullName.trim().isEmpty) ? fallback : fullName;
+    if (effectiveName == null || effectiveName.trim().isEmpty) return "User";
     
-    List<String> parts = fullName.trim().split(' ');
+    List<String> parts = effectiveName.trim().split(' ');
     String firstName = parts[0];
     String lastName = parts.length > 1 ? parts.last : "";
     

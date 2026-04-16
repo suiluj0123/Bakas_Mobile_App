@@ -1,5 +1,6 @@
 const pool = require('../../db');
 const messageCenterModel = require('../models/messageCenterModel');
+const notificationModel = require('../models/notificationModel');
 
 async function processDraw(drawId, winningNumbers) {
   const connection = await pool.getConnection();
@@ -9,6 +10,20 @@ async function processDraw(drawId, winningNumbers) {
     await connection.execute(
       `UPDATE draws SET status = 'completed', winning_numbers = ?, updated_at = NOW() WHERE id = ?`,
       [winningNumbers.join(','), drawId]
+    );
+
+    // Broadcast results notification
+    // Fetch draw name first if needed, or just use a generic message
+    // To be precise, I'll fetch the draw name
+    const [[drawInfo]] = await connection.execute(
+      'SELECT name FROM draws WHERE id = ?',
+      [drawId]
+    );
+    
+    await notificationModel.broadcastNotification(
+      'Draw Results Available!',
+      `The results for ${drawInfo ? drawInfo.name : 'the recent draw'} are now available. Check your tickets!`,
+      'result'
     );
 
     const [bets] = await connection.execute(

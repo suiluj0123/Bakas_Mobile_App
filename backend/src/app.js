@@ -11,6 +11,7 @@ const drawRoutes = require('./routes/drawRoutes');
 const betRoutes = require('./routes/betRoutes');
 const operatorRoutes = require('./routes/operatorRoutes');
 const settingRoutes = require('./routes/settingRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 function createApp() {
   const app = express();
@@ -33,6 +34,7 @@ function createApp() {
   app.use('/api/bets', betRoutes);
   app.use('/api/operators', operatorRoutes);
   app.use('/api/settings', settingRoutes);
+  app.use('/api/notifications', notificationRoutes);
 
   app.use((_req, res) => {
     res.status(404).json({ ok: false, message: 'Not found' });

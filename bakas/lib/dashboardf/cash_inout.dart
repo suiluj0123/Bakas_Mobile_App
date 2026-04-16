@@ -490,7 +490,7 @@ class _CashInOutPageState extends State<CashInOutPage> {
           _PaymentMethodCard(
             imagePath: 'assets/gcash.png',
             name: 'GCash',
-            subtitle: SecurityFormatter.maskName(gcash['wallet_name']),
+            subtitle: SecurityFormatter.maskName(gcash['wallet_name'], fallback: widget.firstName ?? SessionService().firstName),
             trailing: SecurityFormatter.maskAccountNumber(gcash['wallet_number']),
             color: const Color(0xFF007DFE),
             onTap: () {
@@ -507,7 +507,7 @@ class _CashInOutPageState extends State<CashInOutPage> {
           _PaymentMethodCard(
             imagePath: 'assets/maya.jpg',
             name: 'Maya',
-            subtitle: SecurityFormatter.maskName(maya['wallet_name']),
+            subtitle: SecurityFormatter.maskName(maya['wallet_name'], fallback: widget.firstName ?? SessionService().firstName),
             trailing: SecurityFormatter.maskAccountNumber(maya['wallet_number']),
             color: const Color(0xFF00C853),
             onTap: () {

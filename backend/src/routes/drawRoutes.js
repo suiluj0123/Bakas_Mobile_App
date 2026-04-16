@@ -1,5 +1,6 @@
 const express = require('express');
 const drawModel = require('../models/drawModel');
+const notificationModel = require('../models/notificationModel');
 const router = express.Router();
 
 router.get('/upcoming', async (req, res) => {
@@ -33,6 +34,22 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const result = await drawModel.createDraw(req.body);
+    
+    // Broadcast notification for the upcoming game
+    const drawDate = req.body.draw_date
+      ? new Date(req.body.draw_date).toLocaleString('en-PH', {
+          timeZone: 'Asia/Manila',
+          year: 'numeric', month: 'long', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        })
+      : 'a scheduled date';
+
+    await notificationModel.broadcastNotification(
+      'Upcoming Lotto Game!',
+      `A new draw "${req.body.name}" is scheduled on ${drawDate}. Don't miss it — place your bets now!`,
+      'upcoming'
+    );
+
     res.status(201).json({ ok: true, data: result });
   } catch (error) {
     res.status(500).json({ ok: false, message: error.message });

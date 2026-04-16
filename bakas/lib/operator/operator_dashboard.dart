@@ -322,11 +322,12 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
             ElevatedButton(
               onPressed: () async {
                 try {
+                  final selectedLottery = _lotteries.firstWhere((l) => l['id'] == selectedLotteryId);
                   final response = await http.post(
                     Uri.parse('${_apiBaseUrl()}/api/operators/draws'),
                     headers: {'Content-Type': 'application/json'},
                     body: jsonEncode({
-                      'name': 'Draw for ' + selectedLotteryId.toString(),
+                      'name': selectedLottery['name'], // Using actual lottery name
                       'lottery_id': selectedLotteryId,
                       'draw_date': endDateController.text, // This is the end date/draw date
                       'cutoff_date': startDateController.text, // Using cutoff_date as start date based on DB schema constraints
@@ -443,11 +444,12 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
             ElevatedButton(
               onPressed: () async {
                 try {
+                  final selectedLottery = _lotteries.firstWhere((l) => l['id'] == selectedLotteryId);
                   final response = await http.put(
                     Uri.parse('${_apiBaseUrl()}/api/draws/${draw['id']}'),
                     headers: {'Content-Type': 'application/json'},
                     body: jsonEncode({
-                      'name': 'Draw for ' + selectedLotteryId.toString(),
+                      'name': selectedLottery['name'], // Using actual lottery name
                       'draw_date': drawDateController.text,
                       'cutoff_date': cutoffDateController.text,
                       'lottery_id': selectedLotteryId,
@@ -513,6 +515,37 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
     );
   }
 
+  void _deleteLottery(dynamic lottery) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Delete Active Game"),
+        content: Text("Are you sure you want to delete '${lottery['name']}'? This will hide it from the dashboard."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              try {
+                final response = await http.delete(Uri.parse('${_apiBaseUrl()}/api/operators/lotteries/${lottery['id']}'));
+                if (response.statusCode == 200) {
+                  Navigator.pop(ctx);
+                  _fetchData();
+                } else {
+                  debugPrint("Failed to delete lottery: ${response.body}");
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: ${response.body}')));
+                }
+              } catch (e) {
+                debugPrint("Exception deleting lottery: $e");
+              }
+            },
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -554,9 +587,18 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
                         child: ListTile(
                           title: Text(l['name']),
                           subtitle: Text("Jackpot: ${CurrencyFormatter.formatJackpot(l['prize'])}"),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () => _showEditLotteryDialog(l),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 20),
+                                onPressed: () => _showEditLotteryDialog(l),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                onPressed: () => _deleteLottery(l),
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -583,7 +625,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
                       final d = _draws[index];
                       return Card(
                         child: ListTile(
-                          title: Text("Draw #${d['id']}"),
+                          title: Text(d['game_name'] ?? "Draw #${d['id']}"),
                           subtitle: Text("Scheduled: ${_formatDate(d['draw_date'])}"),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,

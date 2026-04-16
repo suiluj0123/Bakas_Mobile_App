@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const { profileUpdate,
     userInfo,
     get_wallet,
@@ -148,8 +149,19 @@ async function checkPassword(req, res) {
             return res.status(400).json({ ok: false, message: 'playerId required' });
         }
         
-        const success = await check_password(playerId, password);
-        if (!success) {
+        const userData = await userInfo(playerId);
+        if (!userData) {
+            return res.status(404).json({ ok: false, message: 'User not found' });
+        }
+        
+        let matches = false;
+        if (userData.password && userData.password.startsWith('$2')) {
+            matches = await bcrypt.compare(password, userData.password);
+        } else {
+            matches = (password === userData.password);
+        }
+
+        if (!matches) {
             return res.status(400).json({ ok: false, message: 'Incorrect password' });
         }
 
@@ -171,7 +183,8 @@ async function changePassword(req, res) {
             return res.status(400).json({ ok: false, message: 'playerId is required' });
         }
 
-        const success = await change_password(data);
+        const hashedPassword = await bcrypt.hash(data.confirmPassword, 10);
+        const success = await change_password({ ...data, confirmPassword: hashedPassword });
         if (!success) {
             return res.status(400).json({ ok: false, message: 'error query' });
         }
