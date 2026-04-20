@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'app_drawer.dart';
+import '../widgets/BakasHeader.dart';
 
 class MessageCenterPage extends StatefulWidget {
   final int? playerId;
@@ -131,21 +132,9 @@ class _MessageCenterPageState extends State<MessageCenterPage> {
                       icon: const Icon(Icons.menu, color: Colors.white),
                       onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                     ),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 238, 244, 192).withOpacity(0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color.fromARGB(255, 242, 245, 157).withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.notifications_none,
-                        color: Colors.white,
-                        size: 22,
-                      ),
+                    NotificationBadge(
+                      playerId: widget.playerId,
+                      firstName: widget.firstName,
                     ),
                   ],
                 ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'app_drawer.dart';
+import '../widgets/BakasHeader.dart';
 
 class GroupsPage extends StatefulWidget {
   final int? playerId;
@@ -626,7 +627,10 @@ class _GroupsPageState extends State<GroupsPage> {
                       icon: const Icon(Icons.menu, color: Colors.white),
                       onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                     ),
-                    const Icon(Icons.notifications_none, color: Colors.white),
+                    NotificationBadge(
+                      playerId: widget.playerId,
+                      firstName: widget.firstName,
+                    ),
                   ],
                 ),
               ),

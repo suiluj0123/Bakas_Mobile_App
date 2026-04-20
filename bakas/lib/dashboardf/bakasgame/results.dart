@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/formatter.dart';
+import '../../widgets/BakasHeader.dart';
+import '../../services/session_service.dart';
 
 class ResultsUI extends StatefulWidget {
   final int? playerId;
@@ -49,11 +51,7 @@ class _ResultsUIState extends State<ResultsUI> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Draw Results"),
-        backgroundColor: const Color(0xFF8B0000),
-        foregroundColor: Colors.white,
-      ),
+      appBar: myAppBar("Draw Results", playerId: widget.playerId),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

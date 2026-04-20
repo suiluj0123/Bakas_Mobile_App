@@ -8,6 +8,7 @@ import '../dashboard.dart';
 import 'app_drawer.dart';
 import '../services/formatter.dart';
 import '../services/session_service.dart';
+import '../widgets/BakasHeader.dart';
 
 class CashInOutPage extends StatefulWidget {
   final int? playerId;
@@ -268,19 +269,10 @@ class _CashInOutPageState extends State<CashInOutPage> {
                         _scaffoldKey.currentState?.openDrawer();
                       },
                     ),
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFFE0F2F1),
+                      NotificationBadge(
+                        playerId: widget.playerId,
+                        firstName: widget.firstName,
                       ),
-                      child: const Icon(
-                        Icons.notifications_none,
-                        color: Color(0xFF4DB6AC),
-                        size: 20,
-                      ),
-                    ),
                   ],
                 ),
               ),

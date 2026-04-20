@@ -26,10 +26,7 @@ class _DrawdatePageState extends State<DrawdatePage> {
   DateTime today = DateTime.now();
   List<dynamic> _availableDraws = [];
   bool _isLoading = true;
-  bool _isCalendarView = false;   
-  List<dynamic> _myGroups = []; 
-  List<dynamic> _myBets = []; 
-  Map<int, int> _groupCounts = {}; 
+  bool _isCalendarView = false;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
@@ -55,40 +52,7 @@ class _DrawdatePageState extends State<DrawdatePage> {
         if (payload['ok'] == true) {
           final draws = payload['data'] ?? [];
 
-          // 2. Fetch My Groups & Bets
-          if (widget.playerId != null) {
-            final myGroupsRes = await http.get(Uri.parse('${_apiBaseUrl()}/api/groups/my/${widget.playerId}'));
-            if (myGroupsRes.statusCode == 200) {
-              final myGroupsPayload = jsonDecode(myGroupsRes.body);
-              if (myGroupsPayload['ok'] == true) {
-                _myGroups = myGroupsPayload['data'] ?? [];
-              }
-            }
-
-            final myBetsRes = await http.get(Uri.parse('${_apiBaseUrl()}/api/bets/player/${widget.playerId}'));
-            if (myBetsRes.statusCode == 200) {
-              final myBetsPayload = jsonDecode(myBetsRes.body);
-              if (myBetsPayload['ok'] == true) {
-                _myBets = myBetsPayload['data'] ?? [];
-              }
-            }
-          }
-
-          // 3. Fetch Public Groups to get counts per draw
-          final publicRes = await http.get(Uri.parse('${_apiBaseUrl()}/api/groups/public'));
-          if (publicRes.statusCode == 200) {
-            final publicPayload = jsonDecode(publicRes.body);
-            if (publicPayload['ok'] == true) {
-              final List<dynamic> allPublic = publicPayload['data'] ?? [];
-              _groupCounts.clear();
-              for (var g in allPublic) {
-                int drawId = g['draw_id'] ?? 0;
-                _groupCounts[drawId] = (_groupCounts[drawId] ?? 0) + 1;
-              }
-            }
-          }
-
-          // 4. Sort Draws: Upcoming/Ongoing first, Completed last
+          // 2. Sort Draws: Upcoming/Ongoing first, Completed last
           draws.sort((a, b) {
             String statusA = _getDisplayStatus(a['status'], a['draw_date'], a['cutoff_date']);
             String statusB = _getDisplayStatus(b['status'], b['draw_date'], b['cutoff_date']);
@@ -333,45 +297,6 @@ class _DrawdatePageState extends State<DrawdatePage> {
     final String drawDate = _formatDate(draw['draw_date']);
     final String cutoffDate = _formatDate(draw['cutoff_date']);
     final String timeLeft = _calculateTimeLeft(draw['cutoff_date']);
-    final int drawId = draw['id'] ?? 0;
-    final int groupCount = _groupCounts[drawId] ?? 0;
-    
-    // Find groups joined via explicitly joining OR via betting
-    final List<dynamic> joinedGroupsForThisDraw = _myGroups
-        .where((g) => g['draw_id'] == drawId)
-        .toList();
-
-    // Also check bets to see if any groups are missing from _myGroups list
-    final List<dynamic> betsForThisDraw = _myBets
-        .where((b) => b['drawdate_id'] == drawId)
-        .toList();
-    
-    for (var bet in betsForThisDraw) {
-      final int bGroupId = bet['group_id'];
-      if (!joinedGroupsForThisDraw.any((g) => g['id'] == bGroupId)) {
-        joinedGroupsForThisDraw.add({
-          'id': bGroupId,
-          'name': bet['group_name'] ?? 'Group $bGroupId',
-          'type': bet['group_type'] == 1 ? 'public' : 'private',
-          'member_count': 0, // Fallback
-        });
-      }
-    }
-
-    final List<String> groupInfoList = joinedGroupsForThisDraw
-        .map((g) {
-          final String name = g['name'] as String? ?? 'Unnamed';
-          final int members = g['member_count'] ?? 0;
-          return "$name ($members players)";
-        })
-        .toList();
-
-    final String? groupType = joinedGroupsForThisDraw.isNotEmpty 
-        ? (joinedGroupsForThisDraw.first['type'] as String?)?.toUpperCase() 
-        : (betsForThisDraw.isNotEmpty 
-            ? (betsForThisDraw.first['group_type'] == 1 ? 'PUBLIC' : 'PRIVATE')
-            : null);
-
     final statusText = _getDisplayStatus(draw['status'], draw['draw_date'], draw['cutoff_date']);
     final bool isCompleted = statusText == 'COMPLETED';
     
@@ -423,13 +348,6 @@ class _DrawdatePageState extends State<DrawdatePage> {
                       _cardDetail("Cutoff date", cutoffDate, isBold: true),
                       _cardDetail("Time left", timeLeft, color: Colors.blue),
                       _cardDetail("Prize", "${CurrencyFormatter.formatJackpot(prize)} Jackpot Prize", color: Colors.grey[700]),
-                      const SizedBox(height: 5),
-                      _cardDetailRow("Group Total", "$groupCount Group(s)"),
-                      _cardDetailRow(
-                        "Joined Groups", 
-                        groupInfoList.isEmpty ? "None yet" : groupInfoList.join('\n'),
-                        color: groupInfoList.isNotEmpty ? const Color(0xFFD4AF37) : null,
-                      ),
                     ],
                   ),
                 ),
@@ -486,20 +404,6 @@ class _DrawdatePageState extends State<DrawdatePage> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _cardDetailRow(String label, String value, {Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 1),
-      child: Text(
-        "$label: $value",
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: color ?? Colors.black,
         ),
       ),
     );

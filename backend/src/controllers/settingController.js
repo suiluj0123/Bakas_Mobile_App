@@ -15,10 +15,26 @@ const { profileUpdate,
 //profile controller
 async function userInfoUpdate(req, res) {
     try {
-        const data = req.body;
-        if (!data || !data.playerId) {
+        const data = { ...req.body };
+        const playerId = data.playerId;
+
+        if (!playerId) {
             return res.status(400).json({ ok: false, message: 'playerId is required' });
         }
+
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+        if (req.files) {
+            if (req.files['profile_photo']) {
+                const profilePhoto = req.files['profile_photo'][0];
+                data.picture = `${baseUrl}/uploads/profiles/${profilePhoto.filename}`;
+            }
+            if (req.files['id_photo']) {
+                const idPhoto = req.files['id_photo'][0];
+                data.id_photo = `${baseUrl}/uploads/profiles/${idPhoto.filename}`;
+            }
+        }
+
         const infoUpdated = await profileUpdate(data);
         if (!infoUpdated) {
             return res.status(400).json({ ok: false, message: 'query error' });

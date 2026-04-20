@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'app_drawer.dart';
 import '../services/session_service.dart';
+import '../widgets/BakasHeader.dart';
 
 class TicketsUI extends StatefulWidget {
   final String? firstName;
@@ -108,16 +109,9 @@ class _TicketsUIState extends State<TicketsUI> {
                         letterSpacing: 1.5,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.notifications_none,
-                        color: Colors.white,
-                      ),
+                    NotificationBadge(
+                      playerId: widget.playerId,
+                      firstName: widget.firstName,
                     ),
                   ],
                 ),

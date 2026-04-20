@@ -12,6 +12,7 @@ import 'services/session_service.dart';
 import 'services/formatter.dart';
 import 'services/notification_service.dart';
 import 'dashboardf/notifications.dart';
+import 'widgets/BakasHeader.dart';
 
 // DashboardUI widget definition starts here
 
@@ -29,7 +30,6 @@ class _DashboardUIState extends State<DashboardUI> {
   double _balance = 0.0;
   bool _isLoading = true;
   bool _hasFetched = false;
-  int _unreadCount = 0;
 
   String _apiBaseUrl() {
     if (kIsWeb) return 'http://localhost:3001';
@@ -67,8 +67,7 @@ class _DashboardUIState extends State<DashboardUI> {
         Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=$effectivePlayerId'),
       );
 
-      // Fetch unread notifications
-      final count = await NotificationService().fetchUnreadCount(effectivePlayerId);
+      // Balance fetch only
 
       if (res.statusCode == 200) {
         final payload = (res.body.isNotEmpty ? (jsonDecode(res.body) as Map<String, dynamic>) : <String, dynamic>{});
@@ -77,7 +76,6 @@ class _DashboardUIState extends State<DashboardUI> {
             setState(() {
               final bal = payload['data']['balance'];
               _balance = (bal is String) ? (double.tryParse(bal) ?? 0.0) : (bal as num).toDouble();
-              _unreadCount = count;
               _isLoading = false;
             });
           }
@@ -151,66 +149,9 @@ class _DashboardUIState extends State<DashboardUI> {
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
 
-                    GestureDetector(
-                      onTap: () {
-                        if (userPlayerId != null) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => NotificationScreen(
-                                playerId: userPlayerId,
-                                firstName: displayName,
-                              ),
-                            ),
-                          ).then((_) => _fetchBalance());
-                        }
-                      },
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.notifications_none,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                          ),
-                          if (_unreadCount > 0)
-                            Positioned(
-                              top: -2,
-                              right: -2,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 16,
-                                  minHeight: 16,
-                                ),
-                                child: Text(
-                                  '$_unreadCount',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                    NotificationBadge(
+                      playerId: userPlayerId,
+                      firstName: displayName,
                     ),
                   ],
                   ),

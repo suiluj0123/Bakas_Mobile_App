@@ -13,9 +13,10 @@ const { userInfoUpdate,
         getBarangaysList
     } = require('../controllers/settingController');
 
+const { uploadProfilePhotos } = require('../middleware/uploadMiddleware');
 const router = express.Router();
 
-router.put('/profileUpdate', userInfoUpdate);
+router.put('/profileUpdate', uploadProfilePhotos, userInfoUpdate);
 router.get('/profile/:playerId', getUserInfo);
 router.get('/wallet/:playerId', getWallet);
 router.post('/addWallet', addWallet);

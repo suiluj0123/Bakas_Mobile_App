@@ -3,10 +3,13 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:image_picker/image_picker.dart';
 import '../app_drawer.dart';
-import '/widgets/BakasHeader.dart';
+import '../../services/formatter.dart';
 import '/widgets/WhiteContainer.dart';
 import '/widgets/backgroundRed.dart';
+import '/widgets/BakasHeader.dart';
 
 class settingPage extends StatefulWidget {
   final String? firstName;
@@ -21,7 +24,12 @@ class _settingPageState extends State<settingPage> {
   bool _isLoading = true;
   Map<String, dynamic>? _profileData;
 
-  // PH Locations Data
+  final _picker = ImagePicker();
+  XFile? _profileXFile;
+  Uint8List? _profileBytes;
+  XFile? _idXFile;
+  Uint8List? _idBytes;
+
   List<dynamic> _regions = [];
   List<dynamic> _provinces = [];
   List<dynamic> _cities = [];
@@ -149,6 +157,108 @@ class _settingPageState extends State<settingPage> {
     super.dispose();
   }
 
+  Future<void> _pickProfileImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
+      );
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        setState(() {
+          _profileXFile = pickedFile;
+          _profileBytes = bytes;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking profile image: $e');
+    }
+  }
+
+  void _showProfileSourceActionSheet(BuildContext context, StateSetter setModalState) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Photo Library'),
+              onTap: () async {
+                Navigator.of(context).pop();
+                await _pickProfileImage(ImageSource.gallery);
+                setModalState(() {});
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Camera'),
+              onTap: () async {
+                Navigator.of(context).pop();
+                await _pickProfileImage(ImageSource.camera);
+                setModalState(() {});
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickIdImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        setState(() {
+          _idXFile = pickedFile;
+          _idBytes = bytes;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking ID image: $e');
+    }
+  }
+
+  void _showIdSourceActionSheet(BuildContext context, StateSetter setModalState) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Photo Library'),
+              onTap: () async {
+                Navigator.of(context).pop();
+                await _pickIdImage(ImageSource.gallery);
+                setModalState(() {});
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Camera'),
+              onTap: () async {
+                Navigator.of(context).pop();
+                await _pickIdImage(ImageSource.camera);
+                setModalState(() {});
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _fetchProfile() async {
     if (widget.playerId == null) {
        setState(() => _isLoading = false);
@@ -193,25 +303,46 @@ class _settingPageState extends State<settingPage> {
 
   Future<void> _updateProfile() async {
     try {
-      final res = await http.put(
-        Uri.parse('${_apiBaseUrl()}/api/settings/profileUpdate'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'playerId': widget.playerId,
-          'last_name': _lastNameController.text,
-          'first_name': _firstNameController.text,
-          'middle_name': _middleNameController.text,
-          'contact_num': _contactNumController.text,
-          'email': _emailController.text,
-          'region_code': _selectedRegion,
-          'provincial_code': _selectedProvince,
-          'city_code': _selectedCity,
-          'barangay_code': _selectedBarangay,
-          'address': _streetController.text,
-          'id_code': _idTypeController.text,
-          'id_number': _idNumberController.text,
-        }),
-      );
+      final uri = Uri.parse('${_apiBaseUrl()}/api/settings/profileUpdate');
+      final request = http.MultipartRequest('PUT', uri);
+
+      // Text fields
+      request.fields['playerId'] = widget.playerId.toString();
+      request.fields['last_name'] = _lastNameController.text;
+      request.fields['first_name'] = _firstNameController.text;
+      request.fields['middle_name'] = _middleNameController.text;
+      request.fields['contact_num'] = _contactNumController.text;
+      request.fields['email'] = _emailController.text;
+      if (_selectedRegion != null) request.fields['region_code'] = _selectedRegion!;
+      if (_selectedProvince != null) request.fields['provincial_code'] = _selectedProvince!;
+      if (_selectedCity != null) request.fields['city_code'] = _selectedCity!;
+      if (_selectedBarangay != null) request.fields['barangay_code'] = _selectedBarangay!;
+      request.fields['address'] = _streetController.text;
+      request.fields['id_code'] = _idTypeController.text;
+      request.fields['id_number'] = _idNumberController.text;
+
+      // Profile Photo
+      if (_profileBytes != null && _profileXFile != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'profile_photo',
+          _profileBytes!,
+          filename: _profileXFile!.name,
+          contentType: MediaType('image', _profileXFile!.name.split('.').last == 'png' ? 'png' : 'jpeg'),
+        ));
+      }
+
+      // ID Photo
+      if (_idBytes != null && _idXFile != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'id_photo',
+          _idBytes!,
+          filename: _idXFile!.name,
+          contentType: MediaType('image', _idXFile!.name.split('.').last == 'png' ? 'png' : 'jpeg'),
+        ));
+      }
+
+      final streamedResponse = await request.send();
+      final res = await http.Response.fromStream(streamedResponse);
 
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
@@ -219,6 +350,13 @@ class _settingPageState extends State<settingPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Profile updated successfully')),
           );
+          // Clear picked files after successful upload
+          setState(() {
+            _profileXFile = null;
+            _profileBytes = null;
+            _idXFile = null;
+            _idBytes = null;
+          });
           _fetchProfile(); // Refresh
         }
       } else {
@@ -246,19 +384,29 @@ class _settingPageState extends State<settingPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.grey[300],
-                    backgroundImage: (_profileData?['picture'] != null && _profileData!['picture'].isNotEmpty)
-                        ? NetworkImage(_profileData!['picture'])
-                        : null,
-                    child: (_profileData?['picture'] == null || _profileData!['picture'].isEmpty)
-                        ? const Icon(Icons.camera_alt, size: 30)
-                        : null,
-                   ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text("Attach Profile Pic"),
+                  GestureDetector(
+                    onTap: () => _showProfileSourceActionSheet(context, setModalState),
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: _profileBytes != null
+                              ? MemoryImage(_profileBytes!)
+                              : (_profileData?['picture'] != null && _profileData!['picture'].isNotEmpty)
+                                  ? NetworkImage(_profileData!['picture'])
+                                  : null,
+                          child: (_profileBytes == null && (_profileData?['picture'] == null || _profileData!['picture'].isEmpty))
+                              ? const Icon(Icons.camera_alt, size: 30)
+                              : null,
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          _profileBytes != null ? "Change Selected Pic" : "Attach Profile Pic",
+                          style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 10),
                   editTextTemplate("Last Name", _lastNameController),
@@ -287,12 +435,13 @@ class _settingPageState extends State<settingPage> {
                         )
                       else ...[
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
                           value: (_selectedRegion != null && _regions.any((r) => r['code'].toString() == _selectedRegion.toString())) ? _selectedRegion.toString() : null,
                           decoration: const InputDecoration(labelText: 'Region', border: OutlineInputBorder()),
                           items: _regions.fold<List<dynamic>>([], (list, item) {
                             if (!list.any((e) => e['code'].toString() == item['code'].toString())) list.add(item);
                             return list;
-                          }).map((r) => DropdownMenuItem(value: r['code'].toString(), child: Text(r['name']))).toList(),
+                          }).map((r) => DropdownMenuItem(value: r['code'].toString(), child: Text(r['name'], overflow: TextOverflow.ellipsis))).toList(),
                           onChanged: (val) {
                             setModalState(() => _selectedRegion = val);
                             if (val != null) {
@@ -304,12 +453,13 @@ class _settingPageState extends State<settingPage> {
                         ),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
                           value: (_selectedProvince != null && _provinces.any((p) => p['code'].toString() == _selectedProvince.toString())) ? _selectedProvince.toString() : null,
                           decoration: const InputDecoration(labelText: 'Province', border: OutlineInputBorder()),
                           items: _provinces.fold<List<dynamic>>([], (list, item) {
                             if (!list.any((e) => e['code'].toString() == item['code'].toString())) list.add(item);
                             return list;
-                          }).map((p) => DropdownMenuItem(value: p['code'].toString(), child: Text(p['name']))).toList(),
+                          }).map((p) => DropdownMenuItem(value: p['code'].toString(), child: Text(p['name'], overflow: TextOverflow.ellipsis))).toList(),
                           onChanged: (val) {
                             setModalState(() => _selectedProvince = val);
                             if (val != null) {
@@ -321,12 +471,13 @@ class _settingPageState extends State<settingPage> {
                         ),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
                           value: (_selectedCity != null && _cities.any((c) => c['code'].toString() == _selectedCity.toString())) ? _selectedCity.toString() : null,
                           decoration: const InputDecoration(labelText: 'City/Municipality', border: OutlineInputBorder()),
                           items: _cities.fold<List<dynamic>>([], (list, item) {
                             if (!list.any((e) => e['code'].toString() == item['code'].toString())) list.add(item);
                             return list;
-                          }).map((c) => DropdownMenuItem(value: c['code'].toString(), child: Text(c['name']))).toList(),
+                          }).map((c) => DropdownMenuItem(value: c['code'].toString(), child: Text(c['name'], overflow: TextOverflow.ellipsis))).toList(),
                           onChanged: (val) {
                             setModalState(() => _selectedCity = val);
                             if (val != null) {
@@ -338,12 +489,13 @@ class _settingPageState extends State<settingPage> {
                         ),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
                           value: (_selectedBarangay != null && _barangays.any((b) => b['code'].toString() == _selectedBarangay.toString())) ? _selectedBarangay.toString() : null,
                           decoration: const InputDecoration(labelText: 'Barangay', border: OutlineInputBorder()),
                           items: _barangays.fold<List<dynamic>>([], (list, item) {
                             if (!list.any((e) => e['code'].toString() == item['code'].toString())) list.add(item);
                             return list;
-                          }).map((b) => DropdownMenuItem(value: b['code'].toString(), child: Text(b['name']))).toList(),
+                          }).map((b) => DropdownMenuItem(value: b['code'].toString(), child: Text(b['name'], overflow: TextOverflow.ellipsis))).toList(),
                           onChanged: (val) => setModalState(() => _selectedBarangay = val),
                         ),
                       ],
@@ -356,9 +508,10 @@ class _settingPageState extends State<settingPage> {
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     value: (_idTypeController.text.isNotEmpty && _idTypes.contains(_idTypeController.text)) ? _idTypeController.text : null,
                     decoration: const InputDecoration(labelText: 'ID Type', border: OutlineInputBorder()),
-                    items: _idTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+                    items: _idTypes.map((type) => DropdownMenuItem(value: type, child: Text(type, overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (val) {
                       setModalState(() => _idTypeController.text = val ?? '');
                     },
@@ -366,10 +519,23 @@ class _settingPageState extends State<settingPage> {
                   const SizedBox(height: 10),
                   editTextTemplate("ID Number", _idNumberController),
                   const SizedBox(height: 10),
+                  if (_idBytes != null)
+                    Container(
+                      height: 100,
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        image: DecorationImage(
+                          image: MemoryImage(_idBytes!),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
                   OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.upload_file),
-                    label: const Text("Upload ID Photo"),
+                    onPressed: () => _showIdSourceActionSheet(context, setModalState),
+                    icon: Icon(_idBytes != null ? Icons.edit : Icons.upload_file),
+                    label: Text(_idBytes != null ? "Change ID Photo" : "Upload ID Photo"),
                   ),
                 ],
               ),

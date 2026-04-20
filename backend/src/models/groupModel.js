@@ -26,11 +26,11 @@ async function createGroup({ name, desc, status, group_type, created_by, drawdat
   const [result] = await pool.execute(
     `INSERT INTO \`groups\` 
        (pgroup_code, lotterytype_id, drawdate_id, system_id, operator_id, name, \`desc\`, total_bets, max_per, gen_numbers, status, created_by, updated_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+     VALUES (?, ?, COALESCE(?, (SELECT id FROM draws WHERE deleted_at IS NULL ORDER BY (status = 'upcoming') DESC, draw_date ASC, id DESC LIMIT 1)), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
     [
       pgroup_code,
       groupTypeFlag, 
-      drawdate_id || 32,            
+      drawdate_id || null,            
       4,            
       null,         
       name,

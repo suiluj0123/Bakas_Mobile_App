@@ -8,6 +8,11 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+const profileDir = path.join(__dirname, '../../uploads/profiles');
+if (!fs.existsSync(profileDir)) {
+  fs.mkdirSync(profileDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -42,5 +47,22 @@ module.exports = {
   uploadIdPhoto: upload.fields([
     { name: 'id_photo', maxCount: 1 },
     { name: 'selfie_photo', maxCount: 1 },
+  ]),
+  uploadProfilePhotos: multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, profileDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const prefix = file.fieldname === 'profile_photo' ? 'profile-' : 'id-';
+        cb(null, prefix + uniqueSuffix + path.extname(file.originalname));
+      },
+    }),
+    fileFilter: fileFilter,
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }).fields([
+    { name: 'profile_photo', maxCount: 1 },
+    { name: 'id_photo', maxCount: 1 },
   ]),
 };

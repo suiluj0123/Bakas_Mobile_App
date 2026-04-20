@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'app_drawer.dart';
 import '../services/session_service.dart';
+import '../widgets/BakasHeader.dart';
 
 class HistoryUI extends StatefulWidget {
   final int? playerId;
@@ -111,22 +112,10 @@ class _HistoryUIState extends State<HistoryUI> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                        width: 1,
-                      ),
+                    NotificationBadge(
+                      playerId: widget.playerId,
+                      firstName: widget.firstName,
                     ),
-                    child: const Icon(
-                      Icons.notifications_none,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
                 ],
               ),
             ),
