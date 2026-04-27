@@ -12,6 +12,7 @@ import '../../widgets/BackButton.dart';
 import '../app_drawer.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import '../../services/formatter.dart';
 
 
 class publicGroupPage extends StatefulWidget {
@@ -33,6 +34,8 @@ class _publicGroupPageState extends State<publicGroupPage> {
   Map<String, dynamic>? _drawDetails;
   bool _isLoadingDraw = true;
   Timer? _chatTimer;
+  final Map<int, int> _selectedQuantities = {};
+  double _playerBalance = 0.0;
 
 
   String _apiBaseUrl() {
@@ -88,29 +91,45 @@ class _publicGroupPageState extends State<publicGroupPage> {
   String _getDisplayStatus() {
     if (_drawDetails == null) return 'UPCOMING';
     final status = _drawDetails!['status']?.toString().toUpperCase() ?? 'UPCOMING';
-    if (status == 'UPCOMING') {
-      try {
-        final drawDateStr = _drawDetails!['draw_date'];
-        if (drawDateStr != null) {
-          final drawDate = DateTime.parse(drawDateStr);
-          if (DateTime.now().isAfter(drawDate)) {
-            return 'ONGOING';
-          }
-        }
-      } catch (e) {
-        debugPrint('Error parsing date for status: $e');
-      }
-    }
     return status;
+  }
+
+  String _calculateTimeLeft(String? cutoffDateStr) {
+    if (cutoffDateStr == null) return 'N/A';
+    try {
+      final cutoffDate = DateTime.parse(cutoffDateStr).toUtc().add(const Duration(hours: 8));
+      final now = DateTime.now().toUtc().add(const Duration(hours: 8));
+      final diff = cutoffDate.difference(now);
+      if (diff.isNegative) return 'Closed';
+      if (diff.inDays > 0) return '${diff.inDays}D ${diff.inHours % 24}H';
+      if (diff.inHours > 0) return '${diff.inHours}H ${diff.inMinutes % 60}M';
+      return '${diff.inMinutes}M';
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '...';
+    try {
+      final dateTime = DateTime.parse(dateStr).toUtc().add(const Duration(hours: 8));
+      return DateFormat('MMMM d, yyyy, h:mm a').format(dateTime);
+    } catch (e) {
+      return dateStr;
+    }
   }
 
   Future<void> _fetchPublicGroups() async {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final drawId = widget.drawId ?? args?['drawId'];
+    final lotteryId = widget.lotteryId ?? args?['lotteryId'];
+    final playerId = widget.playerId ?? args?['playerId'];
     try {
-      final url = drawId != null 
-          ? '${_apiBaseUrl()}/api/groups/public?drawId=$drawId' 
-          : '${_apiBaseUrl()}/api/groups/public';
+      String url = '${_apiBaseUrl()}/api/groups/public?';
+      if (drawId != null) url += 'drawId=$drawId&';
+      if (lotteryId != null) url += 'lotteryId=$lotteryId&';
+      if (playerId != null) url += 'playerId=$playerId';
+      
       final res = await http.get(Uri.parse(url));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
@@ -122,6 +141,20 @@ class _publicGroupPageState extends State<publicGroupPage> {
       debugPrint('Error: $e');
     }
     if (mounted) setState(() => _isLoading = false);
+  }
+
+  String _getSystemName(dynamic systemId) {
+    if (systemId == null) return "Standard";
+    final s = int.tryParse(systemId.toString()) ?? 1;
+    switch (s) {
+      case 1: return "System 7";
+      case 2: return "System 8";
+      case 3: return "System 9";
+      case 4: return "System 10";
+      case 5: return "System 11";
+      case 6: return "System 12";
+      default: return "Standard";
+    }
   }
 
   Widget _actionButton(BuildContext context, String text, VoidCallback onTap, {bool isDelete = false}) {
@@ -547,82 +580,185 @@ class _publicGroupPageState extends State<publicGroupPage> {
   Widget publicGroupItem(Map<String, dynamic> group) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 239, 239, 239),
-        border: Border.all(
-          color: const Color.fromARGB(255, 255, 255, 255),
-          width: 0.5,
-        ),
-        borderRadius: BorderRadius.all(Radius.circular(30)),
+        color: const Color(0xFFE5E9D5),
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      padding: EdgeInsets.fromLTRB(15, 10, 15, 10),
-      margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.all(15),
+      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                group['name'] ?? 'N/A',
-                style: TextStyle(
+                group['name'] ?? 'GROUP',
+                style: const TextStyle(
                   fontFamily: 'Montserrat',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.black,
                 ),
               ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'Open',
-                   style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold),
+              const Spacer(),
+              Text(
+                '${group['game_name'] ?? 'Draw'} - ${_formatDate(group['draw_date'])}',
+                style: const TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 5),
+          const SizedBox(height: 5),
           Text(
-            group['desc'] ?? '',
-            style: TextStyle(
+            'System Games: ${_getSystemName(group['system_id'])}',
+            style: const TextStyle(
               fontFamily: 'Montserrat',
-              fontSize: 13,
-              color: Colors.grey[700],
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   Text(
-                    'Operator: ${group['created_by_name'] ?? 'Admin'}',
-                    style: TextStyle(fontFamily: 'Montserrat', fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    'Code: ${group['pgroup_code'] ?? 'N/A'}',
-                    style: TextStyle(fontFamily: 'Montserrat', fontSize: 12, color: Colors.orange, fontWeight: FontWeight.bold),
-                  ),
-                ],
+              Expanded(child: _statColumn("Group Bets Target", "${group['target_bets'] ?? 0}")),
+              Expanded(child: _statColumn("Total Group Bets", "${group['total_bets'] ?? 0}")),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(child: _statColumn("Your Max Bets", "${group['max_per'] ?? 0}")),
+              Expanded(child: _statColumn("Price per Bakas", "PHP ${group['price_per_share'] ?? 0}")),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(child: _statColumn("Your Total Bets", "${group['player_total_bets'] ?? 0}")),
+              Expanded(child: Container()), 
+            ],
+          ),
+          const SizedBox(height: 15),
+          const Text(
+            "Group Lotto Numbers:",
+            style: TextStyle(fontFamily: 'Montserrat', fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: (group['gen_numbers'] as String? ?? '').split(',').where((s) => s.trim().isNotEmpty).map((n) => Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B0000),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1)
               ),
-              ElevatedButton(
-                onPressed: () => _showGroupActions(context, group),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF8B0000),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  minimumSize: Size(80, 30),
+              child: Text(
+                n.trim(),
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            )).toList(),
+          ),
+          const SizedBox(height: 15),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [],
                 ),
-                child: Text(
-                  'Actions',
-                  style: TextStyle(
-                    fontFamily: 'Montserrat',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                    color: Colors.white,
+              ),
+              DropdownButton<int>(
+                value: _selectedQuantities[group['id']] ?? 1,
+                items: List.generate(
+                  (() {
+                    final target = double.tryParse(group['target_bets']?.toString() ?? '0') ?? 0;
+                    final total = double.tryParse(group['total_bets']?.toString() ?? '0') ?? 0;
+                    final maxPer = double.tryParse(group['max_per']?.toString() ?? '10') ?? 10;
+                    final alreadyBet = double.tryParse(group['player_total_bets']?.toString() ?? '0') ?? 0;
+                    
+                    final globalLeft = (target - total).clamp(0.0, target);
+                    final playerLeft = (maxPer - alreadyBet).clamp(0.0, maxPer);
+                    
+                    final limit = (globalLeft < playerLeft ? globalLeft : playerLeft).toInt();
+                    return limit > 0 ? limit : 1; // Show at least 1 in list if limit is 0 but we want to avoid crash
+                  })(),
+                  (index) => DropdownMenuItem(value: index + 1, child: Text("${index + 1}", style: const TextStyle(fontSize: 12))),
+                ).toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedQuantities[group['id']] = val);
+                },
+              ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: () async {
+                   final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+                   final playerId = widget.playerId ?? args?['playerId'];
+                   final quantity = _selectedQuantities[group['id']] ?? 1;
+                   
+                   final confirm = await showDialog<bool>(
+                     context: context,
+                     builder: (context) => AlertDialog(
+                       title: const Text("Confirm Bakas"),
+                       content: Text("Are you sure you want to bet $quantity shares for PHP ${(quantity * (double.tryParse(group['price_per_share']?.toString() ?? '0') ?? 0)).toStringAsFixed(2)}?"),
+                       actions: [
+                         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+                         ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text("Confirm")),
+                       ],
+                     ),
+                   );
+
+                   if (confirm == true) {
+                     try {
+                       final res = await http.post(
+                         Uri.parse('${_apiBaseUrl()}/api/bets/bakas-public'),
+                         headers: {'Content-Type': 'application/json'},
+                         body: jsonEncode({
+                           'playerId': playerId,
+                           'groupId': group['id'],
+                           'requestedShares': quantity,
+                         }),
+                       );
+                        if (res.statusCode == 200) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bakas successful!")));
+                          _fetchPublicGroups(); // Refresh group data
+                          PlayerBalanceWidget.refresh(); // Automatically update balance in header
+                        } else {
+                         final payload = jsonDecode(res.body);
+                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(payload['message'] ?? "Error placing bet")));
+                       }
+                     } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Connection error: $e")));
+                     }
+                   }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B0000),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'BAKAS',
+                    style: TextStyle(
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w900,
+                      fontSize: 11,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -633,49 +769,91 @@ class _publicGroupPageState extends State<publicGroupPage> {
     );
   }
 
+  Widget _statColumn(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontFamily: 'Montserrat', fontSize: 9, color: Colors.black87, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 1),
+        Text(
+          value,
+          style: const TextStyle(fontFamily: 'Montserrat', fontSize: 11, color: Colors.black, fontWeight: FontWeight.w800),
+        ),
+      ],
+    );
+  }
+
   void _showCreateDialog() {
     final nameController = TextEditingController();
     final descController = TextEditingController();
+    final numbersController = TextEditingController();
+    final targetBetsController = TextEditingController();
+    final maxPerController = TextEditingController();
+    final priceController = TextEditingController();
+    int selectedSystem = 6;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Create Public Group"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: InputDecoration(labelText: "Name")),
-            TextField(controller: descController, decoration: InputDecoration(labelText: "Description")),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text("Create Public Group"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: "Group Code (e.g. LVCP-A)")),
+                TextField(controller: descController, decoration: const InputDecoration(labelText: "Description")),
+                TextField(controller: numbersController, decoration: const InputDecoration(labelText: "Lotto Numbers (comma separated)")),
+                DropdownButtonFormField<int>(
+                  value: selectedSystem,
+                  decoration: const InputDecoration(labelText: "System Game"),
+                  items: [6, 7, 8, 9, 10, 11, 12].map((s) => DropdownMenuItem(value: s, child: Text("System $s"))).toList(),
+                  onChanged: (val) => setDialogState(() => selectedSystem = val!),
+                ),
+                TextField(controller: targetBetsController, decoration: const InputDecoration(labelText: "Group Bets Target (Total Shares)"), keyboardType: TextInputType.number),
+                TextField(controller: maxPerController, decoration: const InputDecoration(labelText: "Player Max Bets"), keyboardType: TextInputType.number),
+                TextField(controller: priceController, decoration: const InputDecoration(labelText: "Price per Bakas (PHP)"), keyboardType: TextInputType.number),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isNotEmpty) {
+                  final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+                  final drawId = widget.drawId ?? args?['drawId'];
+                  final res = await http.post(
+                    Uri.parse('${_apiBaseUrl()}/api/groups'),
+                    headers: {'Content-Type': 'application/json'},
+                    body: jsonEncode({
+                      'name': nameController.text,
+                      'desc': descController.text,
+                      'group_type': 'Public',
+                      'status': 'Active',
+                      'drawdate_id': drawId,
+                      'created_by': widget.playerId ?? (ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?)?['playerId'],
+                      'gen_numbers': numbersController.text,
+                      'system_id': selectedSystem,
+                      'target_bets': int.tryParse(targetBetsController.text) ?? 100,
+                      'max_per': int.tryParse(maxPerController.text) ?? 10,
+                      'price_per_share': double.tryParse(priceController.text) ?? 25.0,
+                    }),
+                  );
+
+                  if (res.statusCode == 201) {
+                    _fetchPublicGroups();
+                    Navigator.pop(context);
+                  }
+                }
+              },
+              child: const Text("Create"),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel")),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-                final drawId = widget.drawId ?? args?['drawId'];
-                final res = await http.post(
-                  Uri.parse('${_apiBaseUrl()}/api/groups'),
-                  headers: {'Content-Type': 'application/json'},
-                  body: jsonEncode({
-                    'name': nameController.text,
-                    'desc': descController.text,
-                    'group_type': 'Public',
-                    'status': 'Active',
-                    'drawdate_id': drawId,
-                    'created_by': widget.playerId ?? (ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?)?['playerId'],
-                  }),
-                );
-
-                if (res.statusCode == 201) {
-                  _fetchPublicGroups();
-                  Navigator.pop(context);
-                }
-              }
-            },
-            child: Text("Create"),
-          ),
-        ],
       ),
     );
   }
@@ -696,14 +874,22 @@ class _publicGroupPageState extends State<publicGroupPage> {
           bottom: false,
           child: Column(
             children: [
-              PlayerBalanceWidget(playerId: playerId),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    PlayerBalanceWidget(playerId: playerId, compact: true),
+                  ],
+                ),
+              ),
               WhiteContainer(
                 child: Column(
                   children: [
-                    Container(
-                      margin: EdgeInsets.fromLTRB(15, 5, 0, 0),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(15, 5, 15, 0),
                       child: Align(
-                        alignment: Alignment.topLeft,
+                        alignment: Alignment.centerLeft,
                         child: myBackbutton(),
                       ),
                     ),
@@ -711,64 +897,53 @@ class _publicGroupPageState extends State<publicGroupPage> {
                       _drawDetails?['game_name'] ?? 'Loading...',
                       style: const TextStyle(
                         fontFamily: 'Montserrat',
-                        fontWeight: FontWeight.w800,
-                        fontSize: 35,
-                        color: Color(0xFF8B0000),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 32,
+                        color: Color(0xFF3B1E08),
                       ),
                     ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Public Groups',
-                      style: TextStyle(
-                        fontFamily: 'Montserrat',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 22,
-                        color: Colors.black,
-                      ),
-                    ),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
+                    if (!_isLoadingDraw && _drawDetails != null) ...[
+                      _drawDetailRow("Draw date", _formatDate(_drawDetails!['draw_date'])),
+                      _drawDetailRow("Cut-off date", _formatDate(_drawDetails!['cutoff_date'])),
+                      _drawDetailRow("Time left", _calculateTimeLeft(_drawDetails!['cutoff_date'])),
+                      _drawDetailRow("Prize", "PHP ${CurrencyFormatter.formatJackpot(_drawDetails!['prize'])} Jackpot Prize"),
+                    ],
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _showCreateDialog,
-                              icon: Icon(Icons.add, size: 18),
-                              label: Text("Create Group", style: TextStyle(fontSize: 12)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF8B0000),
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
-                      child: Divider(
-                        color: const Color(0xFF8B0000),
-                        thickness: 1,
-                        height: 20,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 5),
+                      child: Divider(color: const Color(0xFF8B0000), thickness: 0.5),
                     ),
                     Expanded(
                       child: _isLoading
-                          ? Center(child: CircularProgressIndicator(color: Color(0xFF8B0000)))
+                          ? Center(child: CircularProgressIndicator(color: const Color(0xFF8B0000)))
                           : _groups.isEmpty
-                              ? Center(child: Text("No public groups available"))
+                              ? const Center(child: Text("No public groups available"))
                               : ListView.builder(
-                                  padding: EdgeInsets.zero,
-                              itemCount: _groups.length,
-                              itemBuilder: (context, index) => publicGroupItem(_groups[index]),
-                            ),
+                                  padding: const EdgeInsets.only(top: 10),
+                                  itemCount: _groups.length,
+                                  itemBuilder: (context, index) => publicGroupItem(_groups[index]),
+                                ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _drawDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontFamily: 'Montserrat', fontSize: 14, color: Colors.black),
+          children: [
+            TextSpan(text: "$label:  ", style: const TextStyle(fontWeight: FontWeight.bold)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w500)),
+          ],
         ),
       ),
     );

@@ -86,7 +86,6 @@ async function deductBalanceForBet({ playerId, amount, ticketCount }) {
     const newBalance = player.credit - totalDeduction;
     const transactionCode = `BET-${Date.now()}`;
 
-    // Record in history
     await connection.execute(
       `INSERT INTO histories 
        (player_id, transaction_code, type, channel, amount, status, balance, created_at, updated_at) 
@@ -94,7 +93,7 @@ async function deductBalanceForBet({ playerId, amount, ticketCount }) {
       [playerId, transactionCode, totalDeduction, newBalance]
     );
 
-    // Update player balance
+  
     await connection.execute(
       'UPDATE players SET credit = ? WHERE id = ?',
       [newBalance, playerId]

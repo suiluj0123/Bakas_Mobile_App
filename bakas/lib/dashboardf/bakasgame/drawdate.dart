@@ -218,7 +218,7 @@ class _DrawdatePageState extends State<DrawdatePage> {
     if (dateStr == null || dateStr.isEmpty) return '';
     try {
       final dateTime = DateTime.parse(dateStr).toUtc().add(const Duration(hours: 8));
-      return DateFormat('yyyy-MM-dd hh:mm a').format(dateTime);
+      return DateFormat('MMMM d, yyyy, h:mm a').format(dateTime);
     } catch (e) {
       if (dateStr.contains('T')) {
         return dateStr.split('T')[0];
@@ -234,9 +234,9 @@ class _DrawdatePageState extends State<DrawdatePage> {
       final now = DateTime.now().toUtc().add(const Duration(hours: 8));
       final diff = cutoffDate.difference(now);
       if (diff.isNegative) return 'Closed';
-      if (diff.inDays > 0) return '${diff.inDays} days';
-      if (diff.inHours > 0) return '${diff.inHours} hours';
-      return '${diff.inMinutes} minutes';
+      if (diff.inDays > 0) return '${diff.inDays}D ${diff.inHours % 24}H';
+      if (diff.inHours > 0) return '${diff.inHours}H ${diff.inMinutes % 60}M';
+      return '${diff.inMinutes}M';
     } catch (e) {
       return 'N/A';
     }
@@ -452,10 +452,10 @@ class _DrawdatePageState extends State<DrawdatePage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey[50],
-                fixedSize: Size(130, 50)
+                fixedSize: const Size(130, 50)
               ),
               onPressed: () => Navigator.pop(context),
-              child: Text("Disagree", style: TextStyle(
+              child: const Text("Disagree", style: TextStyle(
                 fontSize: 18,
                 fontFamily: 'Montserrat',
                 fontWeight: FontWeight.w500,
@@ -465,7 +465,7 @@ class _DrawdatePageState extends State<DrawdatePage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF8B0000),
-                fixedSize: Size(130, 50)
+                fixedSize: const Size(130, 50)
               ),
               onPressed: () {
                 Navigator.pop(context);
@@ -480,7 +480,7 @@ class _DrawdatePageState extends State<DrawdatePage> {
                   },
                 );
               } ,
-              child: Text("Agree", style: TextStyle(
+              child: const Text("Agree", style: TextStyle(
                 fontSize: 18,
                 fontFamily: 'Montserrat',
                 fontWeight: FontWeight.w500,

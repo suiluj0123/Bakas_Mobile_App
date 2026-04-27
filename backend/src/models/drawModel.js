@@ -13,7 +13,8 @@ async function createDraw({ name, lottery_id, draw_date, cutoff_date, created_by
 
 async function getUpcomingDraws() {
   const [rows] = await pool.execute(
-    `SELECT d.*, l.name as game_name, l.prize 
+    `SELECT d.*, l.name as game_name, l.prize,
+            (SELECT COUNT(*) FROM \`groups\` g WHERE g.drawdate_id = d.id AND g.lotterytype_id = 1 AND g.deleted_at IS NULL) as public_group_count
      FROM draws d 
      JOIN lotteries l ON d.lottery_id = l.id
      WHERE d.deleted_at IS NULL 

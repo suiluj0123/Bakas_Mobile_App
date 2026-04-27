@@ -24,7 +24,6 @@ router.put('/editWallet', editWallet);
 router.put('/changePassword', changePassword);
 router.post('/checkPassword', checkPassword);
 
-// Location Routes
 router.get('/regions', getRegionsList);
 router.get('/provinces/:regionCode', getProvincesList);
 router.get('/cities/:provinceCode', getCitiesList);

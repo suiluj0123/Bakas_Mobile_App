@@ -3,14 +3,14 @@ const groupModel = require('../models/groupModel');
 
 async function createGroup(req, res) {
   try {
-    const { name, desc, status, group_type, created_by, drawdate_id, lotterytype_id } = req.body;
+    const { name, desc, status, group_type, created_by, drawdate_id, lotterytype_id, lottery_id, target_bets, price_per_share, gen_numbers, system_id, max_per } = req.body;
 
     if (!name || !created_by) {
       return res.status(400).json({ ok: false, message: 'Name and created_by are required' });
     }
 
     const result = await groupModel.createGroup({
-      name, desc, status, group_type, created_by, drawdate_id, lotterytype_id
+      name, desc, status, group_type, created_by, drawdate_id, lotterytype_id, lottery_id, target_bets, price_per_share, gen_numbers, system_id, max_per
     });
 
     res.status(201).json({ ok: true, data: result });
@@ -22,10 +22,12 @@ async function createGroup(req, res) {
 
 async function getPublicGroups(req, res) {
   try {
-    const { drawId } = req.query;
-    const groups = await groupModel.getPublicGroups(drawId);
+    const { drawId, playerId, lotteryId } = req.query;
+    console.log(`[Groups] Fetch Request - Draw:${drawId}, Player:${playerId}, Game:${lotteryId}`);
+    const groups = await groupModel.getPublicGroups(drawId, playerId, lotteryId);
     res.status(200).json({ ok: true, data: groups });
   } catch (error) {
+    console.error('[Groups] Fetch error:', error.message);
     res.status(500).json({ ok: false, message: error.message });
   }
 }
@@ -77,13 +79,17 @@ async function getGroupById(req, res) {
 async function updateGroup(req, res) {
   try {
     const { id } = req.params;
-    const { name, desc, status } = req.body;
+    const { 
+      name, desc, status, target_bets, price_per_share, gen_numbers, system_id, max_per, drawdate_id 
+    } = req.body;
 
     if (!name) {
       return res.status(400).json({ ok: false, message: 'Name is required' });
     }
 
-    const success = await groupModel.updateGroup(id, { name, desc, status });
+    const success = await groupModel.updateGroup(id, { 
+      name, desc, status, target_bets, price_per_share, gen_numbers, system_id, max_per, drawdate_id 
+    });
 
     if (success) {
       res.status(200).json({ ok: true, message: 'Group updated' });

@@ -4,13 +4,13 @@ const router = express.Router();
 
 router.post('/login', operatorController.login);
 
-// Lottery Management
 router.post('/lotteries', operatorController.createLottery);
 router.put('/lotteries/:id', operatorController.updateLottery);
 router.delete('/lotteries/:id', operatorController.deleteLottery);
 
-// Draw Management
 router.post('/draws', operatorController.createDraw);
 router.put('/draws/:id', operatorController.updateDraw);
+
+router.get('/lucky-pick/:lotteryId', operatorController.generateLuckyPick);
 
 module.exports = router;

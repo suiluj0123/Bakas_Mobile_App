@@ -10,7 +10,7 @@ async function createNotification(user_id, title, message, type = 'general') {
 }
 
 /**
- * Broadcasts a notification to all active players.
+ *
  */
 async function broadcastNotification(title, message, type = 'general') {
   // Using INSERT INTO ... SELECT to efficiently create notifications for all players

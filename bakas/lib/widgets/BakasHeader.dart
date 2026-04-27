@@ -95,7 +95,13 @@ class myDrawer extends StatelessWidget {
 
 class PlayerBalanceWidget extends StatefulWidget {
   final int? playerId;
-  const PlayerBalanceWidget({super.key, this.playerId});
+  final bool compact;
+  const PlayerBalanceWidget({super.key, this.playerId, this.compact = false});
+
+  static final ValueNotifier<int> refreshNotifier = ValueNotifier<int>(0);
+  static void refresh() {
+    refreshNotifier.value++;
+  }
 
   @override
   State<PlayerBalanceWidget> createState() => _PlayerBalanceWidgetState();
@@ -115,6 +121,13 @@ class _PlayerBalanceWidgetState extends State<PlayerBalanceWidget> {
   void initState() {
     super.initState();
     _fetchBalance();
+    PlayerBalanceWidget.refreshNotifier.addListener(_fetchBalance);
+  }
+
+  @override
+  void dispose() {
+    PlayerBalanceWidget.refreshNotifier.removeListener(_fetchBalance);
+    super.dispose();
   }
 
   Future<void> _fetchBalance() async {
@@ -149,6 +162,39 @@ class _PlayerBalanceWidgetState extends State<PlayerBalanceWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.compact) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Credits: ',
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.w600,
+                color: Colors.white70,
+              ),
+            ),
+            Text(
+              _isLoading ? '...' : CurrencyFormatter.format(_balance),
+              style: const TextStyle(
+                fontSize: 14,
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(0, 0, 0, 40),
       child: Column(

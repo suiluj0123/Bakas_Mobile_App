@@ -34,8 +34,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const result = await drawModel.createDraw(req.body);
-    
-    // Broadcast notification for the upcoming game
+
     const drawDate = req.body.draw_date
       ? new Date(req.body.draw_date).toLocaleString('en-PH', {
           timeZone: 'Asia/Manila',

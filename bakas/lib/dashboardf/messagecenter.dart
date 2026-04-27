@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'app_drawer.dart';
 import '../widgets/BakasHeader.dart';
 
@@ -220,7 +221,7 @@ class _MessageCenterPageState extends State<MessageCenterPage> {
                                           index: originalIndex,
                                           title: msg['message'] ?? "",
                                           date: msg['created_at'] != null 
-                                            ? msg['created_at'].toString().split('T')[0]
+                                            ? DateFormat('MMMM d, yyyy, h:mm a').format(DateTime.parse(msg['created_at']).toUtc().add(const Duration(hours: 8)))
                                             : "",
                                           isRead: msg['read'] == 1,
                                         ),

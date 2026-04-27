@@ -106,11 +106,39 @@ async function deleteLottery(req, res) {
   }
 }
 
+async function generateLuckyPick(req, res) {
+  try {
+    const { lotteryId } = req.params;
+    const lottery = await lotteryModel.getLotteryById(lotteryId);
+    if (!lottery) {
+      return res.status(404).json({ ok: false, message: 'Lottery not found' });
+    }
+
+    const start = parseInt(lottery.start_range) || 1;
+    const end = parseInt(lottery.end_range) || 42;
+    const count = parseInt(lottery.number_of_selection) || 6;
+
+    const numbers = [];
+    while (numbers.length < count) {
+      const r = Math.floor(Math.random() * (end - start + 1)) + start;
+      if (!numbers.includes(r)) {
+        numbers.push(r);
+      }
+    }
+    numbers.sort((a, b) => a - b);
+
+    res.json({ ok: true, data: numbers.join(', ') });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: error.message });
+  }
+}
+
 module.exports = {
   login,
   createLottery,
   updateLottery,
   createDraw,
   updateDraw,
-  deleteLottery
+  deleteLottery,
+  generateLuckyPick
 };

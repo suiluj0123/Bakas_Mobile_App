@@ -23,7 +23,6 @@ router.post('/:id/invite', groupController.invitePlayer);
 router.get('/invitations/:playerId', groupController.getInvitations);
 router.put('/invitations/:id/respond', groupController.respondToInvitation);
 
-// Group Chat
 router.get('/:id/messages', groupMessageController.getGroupMessages);
 router.post('/:id/messages', groupMessageController.sendGroupMessage);
 

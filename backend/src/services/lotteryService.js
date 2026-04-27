@@ -12,9 +12,6 @@ async function processDraw(drawId, winningNumbers) {
       [winningNumbers.join(','), drawId]
     );
 
-    // Broadcast results notification
-    // Fetch draw name first if needed, or just use a generic message
-    // To be precise, I'll fetch the draw name
     const [[drawInfo]] = await connection.execute(
       'SELECT name FROM draws WHERE id = ?',
       [drawId]
@@ -34,30 +31,34 @@ async function processDraw(drawId, winningNumbers) {
       [drawId]
     );
 
+    const [prizeRules] = await connection.execute(
+      `SELECT * FROM pcso_tables WHERE deleted_at IS NULL`
+    );
+
     for (const bet of bets) {
       const playerNumbers = bet.selected_numbers ? JSON.parse(bet.selected_numbers) : [];
       const winningArray = winningNumbers;
-
       const matches = playerNumbers.filter(n => winningArray.includes(n)).length;
       
       let status = 'lost';
       let winAmount = 0;
 
-      if (matches === 6) {
+      const rule = prizeRules.find(r => r.lotterytype_id === bet.lotterytype_id && r.no_of_matches === matches);
+
+      if (rule) {
         status = 'won';
-        winAmount = 1000000;
-      } else if (matches === 5) {
-        status = 'won';
-        winAmount = 50000;
-      } else if (matches === 4) {
-        status = 'won';
-        winAmount = 2000;
-      } else if (matches === 3) {
-        status = 'won';
-        winAmount = 100;
+        if (bet.system_id === 4) { 
+          winAmount = rule.sys_10 || rule.prize || 0;
+        } else if (bet.system_id === 5) {
+          winAmount = rule.sys_11 || rule.prize || 0;
+        } else if (bet.system_id === 6) { 
+          winAmount = rule.sys_12 || rule.prize || 0;
+        } else {
+          winAmount = rule.prize || 0;
+        }
       }
 
-      if (status === 'won') {
+      if (status === 'won' && winAmount > 0) {
         await connection.execute(
           `UPDATE bets SET status = 'won', winning_amount = ?, updated_at = NOW() WHERE id = ?`,
           [winAmount, bet.id]
@@ -69,11 +70,11 @@ async function processDraw(drawId, winningNumbers) {
         );
 
         const transactionCode = `WIN-${Date.now()}-${bet.id}`;
-        const [updatedPlayer] = await connection.execute(
+        const [[updatedPlayer]] = await connection.execute(
           'SELECT credit FROM players WHERE id = ?',
           [bet.player_id]
         );
-        const newBalance = updatedPlayer[0].credit;
+        const newBalance = updatedPlayer.credit;
 
         await connection.execute(
           `INSERT INTO histories 
@@ -85,8 +86,8 @@ async function processDraw(drawId, winningNumbers) {
         await messageCenterModel.createMessage({
           senderId: 0, // System
           receiverId: bet.player_id,
-          subject: '🎉 Congratulations! You are a Winner!',
-          content: `You unmatched luck! Your ticket for **${bet.lottery_name || 'Bakas'}** matched ${matches} numbers. 
+          subject: 'Congratulations! You are a Winner!',
+          content: `Your unmatched luck! Your ticket for matched ${matches} numbers. 
           
 ₱ ${winAmount.toLocaleString()} has been credited to your wallet. 
           

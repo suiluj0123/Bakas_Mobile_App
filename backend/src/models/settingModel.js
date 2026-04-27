@@ -1,6 +1,5 @@
 const pool = require('../../db');
 
-//profile
 async function userInfo(playerId) {
     const [rows] = await pool.query('SELECT * FROM players WHERE id = ?', [playerId]);
 
@@ -69,7 +68,6 @@ async function profileUpdate(data) {
     return result;
 }
 
-//wallet
 async function get_wallet(playerId) {
     const [rows] = await pool.query(`
         SELECT 
@@ -98,7 +96,6 @@ async function add_wallet(data) {
         throw new Error('Player ID is required to add a wallet');
     }
 
-    // 1. Find the wallet_id from wallet_types based on name
     const [types] = await pool.query('SELECT id FROM wallet_types WHERE name = ? LIMIT 1', [wallet_type]);
     if (!types || types.length === 0) {
         throw new Error(`Wallet type "${wallet_type}" not found in database`);
@@ -127,7 +124,6 @@ async function edit_wallet(playerId, playerWalletId, wallet_number) {
     return result;
 }
 
-//Secuurity
 async function check_password(playerId, oldPassword) {
     const [rows] = await pool.query('SELECT * FROM players WHERE id = ? AND password = ?', [playerId, oldPassword]);
 

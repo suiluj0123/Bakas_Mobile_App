@@ -104,6 +104,31 @@ class _privateGroupPageState extends State<privateGroupPage> {
     return status;
   }
 
+  String _calculateTimeLeft(String? cutoffDateStr) {
+    if (cutoffDateStr == null) return 'N/A';
+    try {
+      final cutoffDate = DateTime.parse(cutoffDateStr).toUtc().add(const Duration(hours: 8));
+      final now = DateTime.now().toUtc().add(const Duration(hours: 8));
+      final diff = cutoffDate.difference(now);
+      if (diff.isNegative) return 'Closed';
+      if (diff.inDays > 0) return '${diff.inDays}D ${diff.inHours % 24}H';
+      if (diff.inHours > 0) return '${diff.inHours}H ${diff.inMinutes % 60}M';
+      return '${diff.inMinutes}M';
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '...';
+    try {
+      final dateTime = DateTime.parse(dateStr).toUtc().add(const Duration(hours: 8));
+      return DateFormat('MMMM d, yyyy, h:mm a').format(dateTime);
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
   Future<void> _fetchPrivateGroups() async {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final int? playerId = widget.playerId ?? args?['playerId'];
@@ -720,6 +745,21 @@ class _privateGroupPageState extends State<privateGroupPage> {
     );
   }
 
+  Widget _drawDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontFamily: 'Montserrat', fontSize: 13, color: Colors.black),
+          children: [
+            TextSpan(text: "$label:  ", style: const TextStyle(fontWeight: FontWeight.bold)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -766,6 +806,12 @@ class _privateGroupPageState extends State<privateGroupPage> {
                         color: Colors.black,
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    if (!_isLoadingDraw && _drawDetails != null) ...[
+                      _drawDetailRow("Draw date", _formatDate(_drawDetails!['draw_date'])),
+                      _drawDetailRow("Cut-off date", _formatDate(_drawDetails!['cutoff_date'])),
+                      _drawDetailRow("Time left", _calculateTimeLeft(_drawDetails!['cutoff_date'])),
+                    ],
                     SizedBox(height: 10),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -773,21 +819,9 @@ class _privateGroupPageState extends State<privateGroupPage> {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _showCreateDialog,
-                              icon: Icon(Icons.add, size: 18),
-                              label: Text("Create", style: TextStyle(fontSize: 11)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF8B0000),
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton.icon(
                               onPressed: _showJoinDialog,
-                              icon: Icon(Icons.vpn_key, size: 18),
-                              label: Text("Join Code", style: TextStyle(fontSize: 11)),
+                              icon: const Icon(Icons.vpn_key, size: 18),
+                              label: const Text("Join Code", style: TextStyle(fontSize: 11)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.orangeAccent,
                                 foregroundColor: Colors.black,

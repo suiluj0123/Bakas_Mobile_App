@@ -1,14 +1,13 @@
 const pool = require('../../db');
 
 /**
- * Get messages for a specific group
+ *
  * @param {number} groupId 
  * @param {number} limit 
  * @returns {Promise<Array>}
  */
 async function getGroupMessages(groupId, limit = 50) {
-  // Use pool.query instead of pool.execute because some MySQL versions 
-  // have issues with pagination (LIMIT) in prepared statements.
+
   const [rows] = await pool.query(
     `SELECT 
       gm.id, 
@@ -30,7 +29,7 @@ async function getGroupMessages(groupId, limit = 50) {
 
 
 /**
- * Create a new group message
+ * 
  * @param {Object} data 
  * @returns {Promise<Object>}
  */

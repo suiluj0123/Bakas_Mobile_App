@@ -65,7 +65,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
     if (dateStr == null || dateStr.isEmpty) return '...';
     try {
       final dateTime = DateTime.parse(dateStr).toUtc().add(const Duration(hours: 8));
-      return DateFormat('yyyy-MM-dd hh:mm a').format(dateTime);
+      return DateFormat('MMMM d, yyyy, h:mm a').format(dateTime);
     } catch (e) {
       return dateStr;
     }
@@ -605,14 +605,25 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
                     },
                   ),
                   const SizedBox(height: 30),
-                  Row(
+                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text("Upcoming Draws", style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold)),
-                      ElevatedButton.icon(
-                        onPressed: _showCreateDrawDialog,
-                        icon: const Icon(Icons.calendar_month),
-                        label: const Text("Schedule Draw"),
+                      Row(
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () => _showManageGroupsDialog(null),
+                            icon: const Icon(Icons.group_work, size: 18),
+                            label: const Text("Manage All Groups"),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade700, foregroundColor: Colors.white),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: _showCreateDrawDialog,
+                            icon: const Icon(Icons.calendar_month),
+                            label: const Text("Schedule Draw"),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -637,10 +648,27 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
                                   borderRadius: BorderRadius.circular(5),
                                   border: Border.all(color: _getStatusColor(_getDisplayStatus(d['status'], d['draw_date'], d['cutoff_date'])))
                                 ),
-                                child: Text(
+                                 child: Text(
                                   _getDisplayStatus(d['status'], d['draw_date'], d['cutoff_date']), 
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _getStatusColor(_getDisplayStatus(d['status'], d['draw_date'], d['cutoff_date'])))
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _getStatusColor(_getDisplayStatus(d['status'], d['draw_date'], d['cutoff_date']))),
                                 ),
+                              ),
+                              const SizedBox(width: 8),
+                              Column(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.add_circle_outline, size: 22, color: Colors.green),
+                                    onPressed: () => _showUpsertGroupDialog(d),
+                                    tooltip: 'Add Public Group',
+                                  ),
+                                  Text("${d['public_group_count'] ?? 0} Bakas", 
+                                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.green)),
+                                ],
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.group, size: 20, color: Colors.blue),
+                                onPressed: () => _showManageGroupsDialog(d),
+                                tooltip: 'Manage Public Groups',
                               ),
                               IconButton(
                                 icon: const Icon(Icons.edit, size: 20),
@@ -659,6 +687,248 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
                 ],
               ),
             ),
+    );
+  }
+
+  void _showManageGroupsDialog(dynamic draw) async {
+    List<dynamic> groups = [];
+    bool loading = true;
+
+    Future<void> fetchGroups() async {
+      try {
+        final url = draw == null 
+          ? '${_apiBaseUrl()}/api/groups/public' 
+          : '${_apiBaseUrl()}/api/groups/public?drawId=${draw['id']}';
+        final res = await http.get(Uri.parse(url));
+        if (res.statusCode == 200) {
+          final payload = jsonDecode(res.body);
+          groups = payload['data'] ?? [];
+        }
+      } catch (e) {
+        debugPrint('Error fetching groups: $e');
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          if (loading) {
+            fetchGroups().then((_) => setDialogState(() => loading = false));
+            return const AlertDialog(content: SizedBox(height: 100, child: Center(child: CircularProgressIndicator())));
+          }
+
+          return AlertDialog(
+            title: Text(draw == null ? "Manage All Public Groups" : "Groups for ${draw['game_name'] ?? 'Draw'}"),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (draw != null) 
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        await _showUpsertGroupDialog(draw);
+                        setDialogState(() => loading = true);
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text("New Public Group"),
+                    ),
+                  const Divider(),
+                  if (groups.isEmpty)
+                    const Padding(padding: EdgeInsets.all(20), child: Text("No public groups found."))
+                  else
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: groups.length,
+                        itemBuilder: (context, i) {
+                          final g = groups[i];
+                          return ListTile(
+                            title: Text("${g['name'] ?? 'GROUP'}"),
+                            subtitle: Text("Game: ${g['game_name'] ?? '...'} | Draw: ${g['drawdate_id']}\nPrice: PHP ${(double.tryParse(g['price_per_share']?.toString() ?? '0') ?? 0).toStringAsFixed(2)} | Target: ${g['target_bets'] ?? 0}"),
+                            isThreeLine: true,
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit, size: 18),
+                                  onPressed: () async {
+                                    // If draw is null (Global view), we need to pass a mock draw object or fetch it
+                                    // For simplicity in edit mode, we use the draw ID from the group
+                                    await _showUpsertGroupDialog(draw ?? {'id': g['drawdate_id'], 'lottery_id': g['lotterytype_id']}, group: g);
+                                    setDialogState(() => loading = true);
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (c) => AlertDialog(
+                                        title: const Text("Delete Group"),
+                                        content: const Text("Are you sure?"),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text("No")),
+                                          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text("Yes")),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      await http.delete(Uri.parse('${_apiBaseUrl()}/api/groups/${g['id']}'));
+                                      setDialogState(() => loading = true);
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Close"))],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _showUpsertGroupDialog(dynamic draw, {dynamic group}) async {
+    final isEdit = group != null;
+    final nameController = TextEditingController(text: isEdit ? group['name'] : '');
+    final descController = TextEditingController(text: isEdit ? group['desc'] : '');
+    final numbersController = TextEditingController(text: isEdit ? group['gen_numbers'] : '');
+    final targetController = TextEditingController(text: isEdit ? (group['target_bets']?.toString() ?? '100') : '100');
+    final maxPerController = TextEditingController(text: isEdit ? (group['max_per']?.toString() ?? '10') : '10');
+    final priceController = TextEditingController(text: isEdit ? (group['price_per_share']?.toString() ?? '25.0') : '25.0');
+    int selectedSystem = isEdit ? (group['system_id'] ?? 6) : 6;
+    bool generating = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(isEdit ? "Edit Public Group" : "Create Public Group"),
+              if (draw != null) 
+                Text(
+                  "For: ${draw['game_name'] ?? 'Game'}",
+                  style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.normal),
+                ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: "Group Code")),
+                TextField(controller: descController, decoration: const InputDecoration(labelText: "Description")),
+                Row(
+                  children: [
+                    Expanded(child: TextField(controller: numbersController, decoration: const InputDecoration(labelText: "Lotto Numbers"))),
+                    IconButton(
+                      icon: generating ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.auto_awesome, color: Colors.orange),
+                      onPressed: generating ? null : () async {
+                        setDialogState(() => generating = true);
+                        try {
+                          final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/operators/lucky-pick/${draw['lottery_id']}'));
+                          if (res.statusCode == 200) {
+                            final payload = jsonDecode(res.body);
+                            setDialogState(() => numbersController.text = payload['data']);
+                          }
+                        } catch (e) {
+                          debugPrint('Lucky pick failed: $e');
+                        } finally {
+                          setDialogState(() => generating = false);
+                        }
+                      },
+                      tooltip: 'Lucky Pick (Auto Generate)',
+                    ),
+                  ],
+                ),
+                DropdownButtonFormField<int>(
+                  value: selectedSystem,
+                  decoration: const InputDecoration(labelText: "System Game"),
+                  items: const [
+                    DropdownMenuItem(value: 6, child: Text("System 12")),
+                    DropdownMenuItem(value: 5, child: Text("System 11")),
+                    DropdownMenuItem(value: 4, child: Text("System 10")),
+                    DropdownMenuItem(value: 3, child: Text("System 9")),
+                    DropdownMenuItem(value: 2, child: Text("System 8")),
+                    DropdownMenuItem(value: 1, child: Text("System 7")),
+                  ],
+                  onChanged: (val) => setDialogState(() => selectedSystem = val!),
+                ),
+                TextField(controller: targetController, decoration: const InputDecoration(labelText: "Target Bets"), keyboardType: TextInputType.number),
+                TextField(controller: maxPerController, decoration: const InputDecoration(labelText: "Max per Player"), keyboardType: TextInputType.number),
+                TextField(controller: priceController, decoration: const InputDecoration(labelText: "Price per Bakas"), keyboardType: TextInputType.number),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  final url = isEdit ? '${_apiBaseUrl()}/api/groups/${group['id']}' : '${_apiBaseUrl()}/api/groups';
+                  final body = {
+                    'name': nameController.text,
+                    'desc': descController.text,
+                    'gen_numbers': numbersController.text,
+                    'system_id': selectedSystem,
+                    'target_bets': int.tryParse(targetController.text) ?? 100,
+                    'max_per': int.tryParse(maxPerController.text) ?? 10,
+                    'price_per_share': double.tryParse(priceController.text) ?? 25.0,
+                    'status': isEdit ? (group['status'] ?? 'Active') : 'Active',
+                    'drawdate_id': draw['id'],
+                    'lottery_id': draw['lottery_id'],
+                    if (!isEdit) ...{
+                      'group_type': 'Public',
+                      'lotterytype_id': 1,
+                      'created_by': widget.operatorId,
+                    }
+                  };
+
+                  final res = await (isEdit ? http.put : http.post)(
+                    Uri.parse(url),
+                    headers: {'Content-Type': 'application/json'},
+                    body: jsonEncode(body),
+                  );
+
+                  if (res.statusCode == 200 || res.statusCode == 201) {
+                    _fetchData(); 
+                    if (context.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Group updated successfully!"), backgroundColor: Colors.green),
+                      );
+                    }
+                  } else {
+                    final err = jsonDecode(res.body);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Error: ${err['message'] ?? 'Failed to save'}")),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Network Error: $e")),
+                    );
+                  }
+                }
+              },
+              child: Text(isEdit ? "Update" : "Create"),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

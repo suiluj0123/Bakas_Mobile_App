@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'app_drawer.dart';
 import '../services/session_service.dart';
 import '../widgets/BakasHeader.dart';
@@ -202,10 +203,9 @@ class _HistoryUIState extends State<HistoryUI> {
                                           : (rawAmount as num).toDouble();
                                       final channel = item['channel'] ?? 'N/A';
                                       final createdAt = item['created_at'] != null
-                                          ? DateTime.parse(item['created_at'])
-                                          : DateTime.now();
-                                      final formattedDate =
-                                          "${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')} | ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}";
+                                          ? DateTime.parse(item['created_at']).toUtc().add(const Duration(hours: 8))
+                                          : DateTime.now().toUtc().add(const Duration(hours: 8));
+                                      final formattedDate = DateFormat('MMMM d, yyyy | h:mm a').format(createdAt);
 
                                       String title = "Transaction";
                                       String message = "Your $channel payment of ₱${amount.toStringAsFixed(2)} was processed.";

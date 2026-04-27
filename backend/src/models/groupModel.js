@@ -13,61 +13,98 @@ function mapMemberStatus(status) {
   if (s === 'active' || s === '1') return 1;
   if (s === 'pending' || s === '2') return 2;
   if (s === 'declined' || s === '3') return 3;
-  return 1; 
+  return 1;
 }
 
 
-async function createGroup({ name, desc, status, group_type, created_by, drawdate_id, lotterytype_id }) {
+async function createGroup({ name, desc, status, group_type, created_by, drawdate_id, lotterytype_id, lottery_id, target_bets, price_per_share, gen_numbers, system_id, max_per }) {
   const pgroup_code = generateGroupCode();
   const numericStatus = (status === 'Inactive' || status === 1) ? 1 : 0;
 
   const groupTypeFlag = (group_type === 'Private' || lotterytype_id === 2) ? 2 : 1;
+  const isOperator = String(created_by).startsWith('OP'); 
 
   const [result] = await pool.execute(
     `INSERT INTO \`groups\` 
-       (pgroup_code, lotterytype_id, drawdate_id, system_id, operator_id, name, \`desc\`, total_bets, max_per, gen_numbers, status, created_by, updated_by, created_at, updated_at)
-     VALUES (?, ?, COALESCE(?, (SELECT id FROM draws WHERE deleted_at IS NULL ORDER BY (status = 'upcoming') DESC, draw_date ASC, id DESC LIMIT 1)), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+       (pgroup_code, lotterytype_id, drawdate_id, system_id, operator_id, name, \`desc\`, total_bets, target_bets, price_per_share, max_per, gen_numbers, status, created_by, updated_by, created_at, updated_at)
+     VALUES (?, ?, COALESCE(?, (SELECT id FROM draws WHERE lottery_id = ? AND status = 'upcoming' AND deleted_at IS NULL ORDER BY draw_date ASC LIMIT 1), (SELECT id FROM draws WHERE status = 'upcoming' AND deleted_at IS NULL ORDER BY draw_date ASC LIMIT 1)), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
     [
       pgroup_code,
-      groupTypeFlag, 
-      drawdate_id || null,            
-      4,            
-      null,         
+      groupTypeFlag,
+      drawdate_id || null,
+      lottery_id || 0, // Used by the first COALESCE subquery (specific lottery)
+      system_id || 4,
+      isOperator ? created_by : null,
       name,
       desc || null,
-      0,            
-      10,            
-      '',           
+      0,
+      target_bets || 0,
+      price_per_share || 0,
+      max_per || 10,
+      gen_numbers || '',
       numericStatus,
       String(created_by),
       String(created_by)
     ]
   );
 
-  try {
-    const memberStatus = mapMemberStatus('active');
-    await pool.execute(
-      `INSERT INTO private_groups (pgroup_code, player_id, player_name, name, \`desc\`, status, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [pgroup_code, created_by, '', name, desc || '', memberStatus, String(created_by)]
-    );
-  } catch (memberErr) {
+  if (!isOperator) {
+    try {
+      const memberStatus = mapMemberStatus('active');
+      await pool.execute(
+        `INSERT INTO private_groups (pgroup_code, player_id, player_name, name, \`desc\`, status, created_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [pgroup_code, created_by, '', name, desc || '', memberStatus, String(created_by)]
+      );
+    } catch (memberErr) {
+      console.error('[Groups] Member insertion failed:', memberErr.message);
+    }
   }
 
   return { id: result.insertId, pgroup_code };
 }
 
 
-async function getPublicGroups(drawId) {
-  const [rows] = await pool.execute(
-    `SELECT id, pgroup_code, name, \`desc\`, total_bets, max_per, status, created_by, created_at, lotterytype_id,
-            drawdate_id as draw_id, 'public' as type,
-            (SELECT COUNT(*) FROM private_groups pg WHERE pg.pgroup_code = g.pgroup_code AND pg.status = 1 AND pg.deleted_at IS NULL) as member_count
+async function getPublicGroups(drawId, playerId, lotteryId) {
+  // Convert inputs to numbers to prevent string vs int mismatches
+  const dId = drawId && drawId !== 'undefined' ? parseInt(drawId) : 0;
+  const lId = lotteryId && lotteryId !== 'undefined' ? parseInt(lotteryId) : 0;
+  const pId = playerId && playerId !== 'undefined' ? parseInt(playerId) : 0;
+
+  let query = `SELECT g.id, g.pgroup_code, g.name, g.\`desc\`, 
+            (SELECT COALESCE(SUM(no_of_bets), 0) FROM bets b WHERE b.group_id = g.id AND b.drawdate_id = g.drawdate_id AND b.deleted_at IS NULL) as total_bets,
+            g.target_bets, g.price_per_share, g.max_per, g.gen_numbers, g.system_id, g.status, g.created_by, g.created_at, g.lotterytype_id,
+            g.drawdate_id as draw_id, 'public' as type,
+            l.name as game_name, l.prize, d.draw_date, d.lottery_id,
+            (SELECT COUNT(*) FROM private_groups pg WHERE pg.pgroup_code = g.pgroup_code AND pg.status = 1 AND pg.deleted_at IS NULL) as member_count,
+            (SELECT COALESCE(SUM(no_of_bets), 0) FROM bets b WHERE b.group_id = g.id AND b.player_id = ? AND b.drawdate_id = g.drawdate_id AND b.deleted_at IS NULL) as player_total_bets
      FROM \`groups\` g
-     WHERE deleted_at IS NULL AND (status = 'Active' OR status = 0) AND lotterytype_id = 1
-     ORDER BY CASE WHEN drawdate_id = ? THEN 0 ELSE 1 END, created_at DESC`,
-    [drawId || 0]
-  );
+     LEFT JOIN draws d ON g.drawdate_id = d.id
+     LEFT JOIN lotteries l ON d.lottery_id = l.id
+     WHERE g.deleted_at IS NULL 
+       AND (g.status = 0 OR g.status = '0' OR g.status = 'Active') 
+       AND g.lotterytype_id = 1`;
+  
+  const params = [pId];
+  
+  if (dId > 0) {
+    query += ` AND g.drawdate_id = ?`;
+    params.push(dId);
+  }
+  
+  if (lId > 0) {
+    query += ` AND (d.lottery_id = ? OR g.drawdate_id IN (SELECT id FROM draws WHERE lottery_id = ?))`;
+    params.push(lId, lId);
+  }
+
+  query += ` ORDER BY g.created_at DESC`;
+
+  const [rows] = await pool.execute(query, params);
+  
+  if (rows.length === 0) {
+    console.log(`[Groups] Found 0 results for dId:${dId}, lId:${lId}. Check status and lotterytype_id in DB.`);
+  }
+
   return rows;
 }
 
@@ -88,39 +125,50 @@ async function getGroupsByPlayerId(playerId) {
 }
 
 
-async function getGroupById(id) {
+async function getGroupById(id, playerId = 0) {
   const [rows] = await pool.execute(
-    `SELECT id, pgroup_code, lotterytype_id, drawdate_id, system_id, operator_id,
-            name, \`desc\`, total_bets, max_per, gen_numbers, status,
-            created_by, created_at, updated_at,
-            drawdate_id as draw_id, CASE WHEN lotterytype_id = 1 THEN 'public' ELSE 'private' END as type,
-            (SELECT COUNT(*) FROM private_groups pg WHERE pg.pgroup_code = g.pgroup_code AND pg.status = 1 AND pg.deleted_at IS NULL) as member_count
+    `SELECT g.id, g.pgroup_code, g.lotterytype_id, g.lottery_id, g.drawdate_id, g.system_id, g.operator_id,
+            g.name, g.\`desc\`, 
+            (SELECT COALESCE(SUM(no_of_bets), 0) FROM bets b WHERE b.group_id = g.id AND b.drawdate_id = g.drawdate_id AND b.deleted_at IS NULL) as total_bets,
+            g.target_bets, g.price_per_share, g.max_per, g.gen_numbers, g.status,
+            g.created_by, g.created_at, g.updated_at,
+            l.name as game_name, l.prize, d.draw_date,
+            g.drawdate_id as draw_id, CASE WHEN g.lotterytype_id = 1 THEN 'public' ELSE 'private' END as type,
+            (SELECT COUNT(*) FROM private_groups pg WHERE pg.pgroup_code = g.pgroup_code AND pg.status = 1 AND pg.deleted_at IS NULL) as member_count,
+            (SELECT COALESCE(SUM(no_of_bets), 0) FROM bets b WHERE b.group_id = g.id AND b.player_id = ? AND b.drawdate_id = g.drawdate_id AND b.deleted_at IS NULL) as player_total_bets
      FROM \`groups\` g
-     WHERE id = ? AND deleted_at IS NULL
+     LEFT JOIN draws d ON g.drawdate_id = d.id
+     LEFT JOIN lotteries l ON d.lottery_id = l.id
+     WHERE g.id = ? AND g.deleted_at IS NULL
      LIMIT 1`,
-    [id]
+    [playerId, id]
   );
   return rows.length ? rows[0] : null;
 }
 
 async function getGroupByCode(code) {
   const [rows] = await pool.execute(
-    `SELECT id, pgroup_code, name, \`desc\`, total_bets, max_per, status, created_by, created_at
-     FROM \`groups\`
-     WHERE pgroup_code = ? AND deleted_at IS NULL
-     LIMIT 1`,
+    `SELECT g.*, l.name as game_name, l.prize, d.draw_date
+     FROM \`groups\` g
+     LEFT JOIN draws d ON g.drawdate_id = d.id
+     LEFT JOIN lotteries l ON d.lottery_id = l.id
+     WHERE g.pgroup_code = ? AND g.deleted_at IS NULL LIMIT 1`,
     [code]
   );
   return rows.length ? rows[0] : null;
 }
 
-async function updateGroup(id, { name, desc, status }) {
-  const numericStatus = (status === 'Inactive' || status === 1) ? 1 : 0;
+async function updateGroup(id, { name, desc, status, target_bets, price_per_share, gen_numbers, system_id, max_per, drawdate_id }) {
+  // If status is a string like 'Active', map it. If it's already a number (from DB), keep it.
+  let numericStatus = status;
+  if (status === 'Active' || status === 'active') numericStatus = 1;
+  if (status === 'Inactive' || status === 'inactive') numericStatus = 0;
+
   const [result] = await pool.execute(
     `UPDATE \`groups\`
-     SET name = ?, \`desc\` = ?, status = ?, updated_at = NOW()
+     SET name = ?, \`desc\` = ?, status = ?, target_bets = ?, price_per_share = ?, gen_numbers = ?, system_id = ?, max_per = ?, drawdate_id = ?, updated_at = NOW()
      WHERE id = ? AND deleted_at IS NULL`,
-    [name, desc || '', numericStatus, id]
+    [name, desc || '', numericStatus, target_bets || 0, price_per_share || 0, gen_numbers || '', system_id || 6, max_per || 10, drawdate_id || null, id]
   );
   return result.affectedRows > 0;
 }
@@ -165,7 +213,7 @@ async function addMember({ pgroup_code, player_id, player_name, user_code, name,
 }
 
 /**
- * Get members of a group
+ * 
  */
 async function getMembers(pgroupCode) {
   const [rows] = await pool.execute(
@@ -182,7 +230,7 @@ async function getMembers(pgroupCode) {
 }
 
 /**
- * Pending invitations for a player
+ * 
  */
 async function getPendingInvitations(playerId) {
   const [rows] = await pool.execute(
@@ -200,7 +248,7 @@ async function getPendingInvitations(playerId) {
 }
 
 /**
- * Respond to invitation (accept / decline)
+ * 
  */
 async function respondToInvitation(id, status) {
   const numericStatus = mapMemberStatus(status);
@@ -212,7 +260,7 @@ async function respondToInvitation(id, status) {
 }
 
 /**
- * Remove member (soft-delete)
+ * 
  */
 async function removeMember(id) {
   const [result] = await pool.execute(
@@ -235,6 +283,14 @@ async function getAvailablePrivateGroups(playerId) {
   return rows;
 }
 
+async function incrementTotalBets(groupId, count) {
+  const [result] = await pool.execute(
+    `UPDATE \`groups\` SET total_bets = total_bets + ?, updated_at = NOW() WHERE id = ?`,
+    [count, groupId]
+  );
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   generateGroupCode,
   createGroup,
@@ -250,4 +306,5 @@ module.exports = {
   respondToInvitation,
   removeMember,
   getAvailablePrivateGroups,
+  incrementTotalBets,
 };

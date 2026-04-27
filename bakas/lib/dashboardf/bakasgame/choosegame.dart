@@ -185,11 +185,26 @@ class _chooseGameState extends State<chooseGamePage> {
     return status;
   }
 
+  String _calculateTimeLeft(String? cutoffDateStr) {
+    if (cutoffDateStr == null) return 'N/A';
+    try {
+      final cutoffDate = DateTime.parse(cutoffDateStr).toUtc().add(const Duration(hours: 8));
+      final now = DateTime.now().toUtc().add(const Duration(hours: 8));
+      final diff = cutoffDate.difference(now);
+      if (diff.isNegative) return 'Closed';
+      if (diff.inDays > 0) return '${diff.inDays}D ${diff.inHours % 24}H';
+      if (diff.inHours > 0) return '${diff.inHours}H ${diff.inMinutes % 60}M';
+      return '${diff.inMinutes}M';
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return '...';
     try {
       final dateTime = DateTime.parse(dateStr).toUtc().add(const Duration(hours: 8));
-      return DateFormat('yyyy-MM-dd hh:mm a').format(dateTime);
+      return DateFormat('MMMM d, yyyy, h:mm a').format(dateTime);
     } catch (e) {
       return dateStr; // fallback to raw string if parsing fails
     }
@@ -256,7 +271,7 @@ class _chooseGameState extends State<chooseGamePage> {
                     ),
                     SizedBox(height: 5),
                     Text(
-                      'Status: ${_getDisplayStatus()}',
+                      'Time left: ${_calculateTimeLeft(_drawDetails?['cutoff_date'])}',
                       style: const TextStyle(
                         fontFamily: 'Montserrat',
                         fontWeight: FontWeight.w500,

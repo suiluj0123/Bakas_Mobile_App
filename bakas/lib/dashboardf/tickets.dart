@@ -172,13 +172,15 @@ class _TicketsUIState extends State<TicketsUI> {
                             ? const Center(child: CircularProgressIndicator())
                             : (() {
                                 final filtered = _tickets.where((t) {
-                                  final gType = t['group_type'];
-                                  // 1 is Public, 2 is Private
-                                  // If group_id is null, it's public (0 or null)
+                                  final gId = t['group_id'];
+                                  final gType = t['group_type']; // 1 = Public, 2 = Private
+                                  
                                   if (_isPublic) {
-                                    return gType == 1 || gType == null || gType == 0;
+                                    // Public tab shows groups where group_id exists and type is 1
+                                    return gId != null && (gType == 1 || gType == null);
                                   } else {
-                                    return gType == 2;
+                                    // Private tab shows solo bets (gId null) or private groups (type 2)
+                                    return gId == null || gType == 2;
                                   }
                                 }).toList();
 
@@ -194,8 +196,8 @@ class _TicketsUIState extends State<TicketsUI> {
                                       String formattedDate = rawDate;
                                       if (rawDate.isNotEmpty) {
                                         try {
-                                          DateTime dt = DateTime.parse(rawDate).toLocal();
-                                          formattedDate = "${dt.year}-${dt.month.toString().padLeft(2,'0')}-${dt.day.toString().padLeft(2,'0')} ${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}";
+                                          DateTime dt = DateTime.parse(rawDate).toUtc().add(const Duration(hours: 8));
+                                          formattedDate = DateFormat('MMMM d, yyyy, h:mm a').format(dt);
                                         } catch (e) {
                                           formattedDate = rawDate;
                                         }
@@ -245,7 +247,7 @@ class _TicketsUIState extends State<TicketsUI> {
     if (dateStr == null || dateStr.isEmpty) return '...';
     try {
       final dateTime = DateTime.parse(dateStr).toUtc().add(const Duration(hours: 8));
-      return DateFormat('MMM dd, yyyy  hh:mm a').format(dateTime);
+      return DateFormat('MMMM d, yyyy, h:mm a').format(dateTime);
     } catch (e) {
       return dateStr;
     }
@@ -308,14 +310,36 @@ class _TicketsUIState extends State<TicketsUI> {
               ],
             ),
             const SizedBox(height: 10),
+            if (ticketData['group_name'] != null) ...[
+              Text(
+                "Group: ${ticketData['group_name']}",
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 13),
+              ),
+              const SizedBox(height: 5),
+            ],
             Text(
               "Bet Date: ${_formatDate(ticketData['created_at'])}",
               style: TextStyle(color: Colors.grey[700], fontSize: 13),
             ),
             const SizedBox(height: 5),
-            Text(
-              "Amount: PHP ${ticketData['amount']}",
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Amount: PHP ${ticketData['amount']}",
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                (() {
+                  final shares = int.tryParse(ticketData['no_of_bets']?.toString() ?? '0') ?? 0;
+                  if (shares > 1) {
+                    return Text(
+                      "$shares Shares",
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B0000), fontSize: 13),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                })(),
+              ],
             ),
           ],
         ),
@@ -333,7 +357,7 @@ class TicketDetailsScreen extends StatelessWidget {
     if (dateStr == null || dateStr.isEmpty) return '...';
     try {
       final dateTime = DateTime.parse(dateStr).toUtc().add(const Duration(hours: 8));
-      return DateFormat('MMM dd, yyyy  hh:mm a').format(dateTime);
+      return DateFormat('MMMM d, yyyy, h:mm a').format(dateTime);
     } catch (e) {
       return dateStr;
     }
@@ -341,7 +365,7 @@ class TicketDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final winningAmount = (ticket['winning_amount'] ?? 0);
+    final winningAmount = double.tryParse(ticket['winning_amount']?.toString() ?? '0') ?? 0.0;
     final dynamic rawSelected = ticket['selected_numbers'];
     List<dynamic> selectedNumbers = [];
     if (rawSelected is List) {
@@ -423,22 +447,45 @@ class TicketDetailsScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Center(
-                                child: Text(
-                                  ticket['lottery_name'] ?? 'Lotto',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 28,
-                                    color: Color(0xFF8B0000),
-                                  ),
+                                 child: Column(
+                                  children: [
+                                    Text(
+                                      ticket['lottery_name'] ?? 'Lotto',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 28,
+                                        color: Color(0xFF8B0000),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      "Jackpot: PHP ${NumberFormat("#,##0.00", "en_US").format(double.tryParse(ticket['prize']?.toString() ?? '0') ?? 0)}",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 15),
                               const Divider(),
                               const SizedBox(height: 10),
                               _detailRow("Status", ticket['status']?.toUpperCase() ?? 'PENDING'),
-                              _detailRow("Amount", "PHP ${ticket['amount']}"),
+                              _detailRow("Amount", "PHP ${(double.tryParse(ticket['amount']?.toString() ?? '0') ?? 0).toStringAsFixed(2)}"),
                               _detailRow("Bet Date", _formatDate(ticket['created_at'])),
-                              _detailRow("Draw Date", _formatDate(ticket['draw_date'])),
+                               _detailRow("Draw Date", _formatDate(ticket['draw_date'])),
+                              _detailRow("Game", ticket['lottery_name'] ?? 'Lotto'),
+                              if (ticket['group_name'] != null)
+                                _detailRow("Group Name", ticket['group_name']),
+                              (() {
+                                final shares = int.tryParse(ticket['no_of_bets']?.toString() ?? '0') ?? 0;
+                                if (shares > 0) {
+                                  return _detailRow("Bakas Shares", "$shares");
+                                }
+                                return const SizedBox.shrink();
+                              })(),
                               const SizedBox(height: 20),
                               const Text(
                                 "Selected Numbers:",

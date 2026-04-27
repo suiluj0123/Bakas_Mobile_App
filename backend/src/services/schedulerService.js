@@ -10,10 +10,14 @@ async function checkAndProcessDraws() {
     for (const draw of draws) {
       const drawDate = new Date(draw.draw_date);
       if (drawDate <= now && draw.status !== 'completed') {
- 
+
+        const startRange = draw.start_range || 1;
+        const endRange = draw.end_range || 42;
+        const count = draw.number_of_selection || 6;
+
         const winningNumbers = [];
-        while (winningNumbers.length < 6) {
-          const num = Math.floor(Math.random() * 42) + 1;
+        while (winningNumbers.length < count) {
+          const num = Math.floor(Math.random() * (endRange - startRange + 1)) + startRange;
           if (!winningNumbers.includes(num)) winningNumbers.push(num);
         }
         winningNumbers.sort((a, b) => a - b);
