@@ -95,6 +95,9 @@ class _startBetPageState extends State<startBetPage> {
           if (mounted) {
             setState(() {
               _drawDetails = payload['data'];
+              if (_drawDetails?['price_per_share'] != null) {
+                _betAmountController.text = _drawDetails!['price_per_share'].toString();
+              }
               _isLoadingDraw = false;
             });
           }
@@ -329,9 +332,9 @@ class _startBetPageState extends State<startBetPage> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'playerId': widget.playerId,
-          'amountPerTicket': double.tryParse(_betAmountController.text) ?? 100, // Dynamic price
+          'amountPerTicket': double.tryParse(_betAmountController.text) ?? 100,
           'tickets': _tickets.map((t) => {
-            'groupId': args?['groupId'] ?? 0, // Should be passed from previous screen
+            'groupId': args?['groupId'] ?? 0, 
             'lotteryId': _drawDetails?['lottery_id'],
             'drawId': _drawDetails?['id'],
             'numbers': t.selectedNumbers
@@ -481,42 +484,61 @@ class _startBetPageState extends State<startBetPage> {
                           height: 20,
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        child: Row(
-                          children: [
-                            const Text(
-                              'Bet Amount:',
-                              style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w700, fontSize: 16),
-                            ),
-                            const SizedBox(width: 15),
-                            const Text(
-                              'PHP ',
-                              style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w700, fontSize: 16, color: Colors.green),
-                            ),
-                            SizedBox(
-                              width: 80,
-                              height: 30,
-                              child: TextField(
-                                controller: _betAmountController,
-                                keyboardType: TextInputType.number,
-                                style: const TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w700, fontSize: 16, color: Colors.green),
-                                decoration: InputDecoration(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(5),
-                                    borderSide: const BorderSide(color: Colors.green),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(5),
-                                    borderSide: const BorderSide(color: Colors.green),
+                      if ((ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?)?['groupId'] == null ||
+                          (ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?)?['groupId'] == 0)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          child: Row(
+                            children: [
+                              const Text(
+                                'Bet Amount:',
+                                style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w700, fontSize: 16),
+                              ),
+                              const SizedBox(width: 15),
+                              const Text(
+                                'PHP ',
+                                style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w700, fontSize: 16, color: Colors.green),
+                              ),
+                              SizedBox(
+                                width: 80,
+                                height: 30,
+                                child: TextField(
+                                  controller: _betAmountController,
+                                  keyboardType: TextInputType.number,
+                                  style: const TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w700, fontSize: 16, color: Colors.green),
+                                  decoration: InputDecoration(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(5),
+                                      borderSide: const BorderSide(color: Colors.green),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(5),
+                                      borderSide: const BorderSide(color: Colors.green),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          child: Row(
+                            children: [
+                              const Text(
+                                'Price per Ticket:',
+                                style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w700, fontSize: 16),
+                              ),
+                              const SizedBox(width: 15),
+                              Text(
+                                'PHP ${_betAmountController.text}',
+                                style: const TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w700, fontSize: 16, color: Colors.green),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
                       Align(
                         alignment: Alignment.centerRight,
                         child: Padding(

@@ -3,7 +3,7 @@ import 'dart:io';
 
 class ApiConfig {
 
-  static const String publicUrl = ''; 
+  static const String publicUrl = 'https://risotto-relapse-spendable.ngrok-free.dev'; 
 
   static String get baseUrl {
     if (publicUrl.isNotEmpty) {

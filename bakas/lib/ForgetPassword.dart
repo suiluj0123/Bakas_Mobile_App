@@ -16,6 +16,7 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
   final _emailController = TextEditingController();
   final _tokenController = TextEditingController();
   final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   
   bool _isLoading = false;
   bool _isTokenSent = false;
@@ -50,8 +51,7 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
       if (res.statusCode == 200 && payload['ok'] == true) {
         setState(() {
           _isTokenSent = true;
-          _successMessage = "Reset token has been sent to your email (Check console for dev).";
-          // For development convenience, pre-fill token if backend returns it
+          _successMessage = null; 
           if (payload['token'] != null) {
             _tokenController.text = payload['token'].toString();
           }
@@ -80,10 +80,19 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
       final email = _emailController.text.trim();
       final token = _tokenController.text.trim();
       final newPassword = _newPasswordController.text;
+      final confirmPassword = _confirmPasswordController.text;
 
       if (token.isEmpty || newPassword.isEmpty) {
         setState(() {
-          _errorText = "Token and new password are required.";
+          _errorText = "New password is required.";
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (newPassword != confirmPassword) {
+        setState(() {
+          _errorText = "Passwords do not match.";
           _isLoading = false;
         });
         return;
@@ -126,6 +135,7 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
     _emailController.dispose();
     _tokenController.dispose();
     _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -174,7 +184,7 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
                     Align(
                       alignment: Alignment.center,
                       child: Text(
-                        _isTokenSent ? "Reset Password" : "Forget Password",
+                        _isTokenSent ? "Reset Password" : "Forgot Password",
                         style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -185,7 +195,7 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
                     const SizedBox(height: 20),
                     Text(
                       _isTokenSent 
-                          ? "Enter the 6-digit token and your new password."
+                          ? "Create a new password for your account."
                           : "Please enter your email to reset the password",
                       style: TextStyle(
                         fontSize: 14,
@@ -202,16 +212,19 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
                         keyboardType: TextInputType.emailAddress,
                       ),
                     ] else ...[
-                      GlassInput(
-                        hint: "Reset Token",
-                        icon: Icons.vpn_key_outlined,
-                        controller: _tokenController,
-                      ),
-                      const SizedBox(height: 16),
+
+                      const SizedBox(height: 0),
                       GlassInput(
                         hint: "New Password",
                         icon: Icons.lock_outline,
                         controller: _newPasswordController,
+                        isPassword: true,
+                      ),
+                      const SizedBox(height: 16),
+                      GlassInput(
+                        hint: "Confirm New Password",
+                        icon: Icons.lock_outline,
+                        controller: _confirmPasswordController,
                         isPassword: true,
                       ),
                     ],
@@ -234,7 +247,7 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
                     const SizedBox(height: 30),
                     Center(
                       child: SizedBox(
-                        width: 200,
+                        width: 220,
                         height: 45,
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : (_isTokenSent ? _handleResetPassword : _handleRequestToken),
@@ -248,7 +261,10 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
                           child: _isLoading 
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                             : Text(
-                                _isTokenSent ? "Reset My Password" : "Get Reset Token",
+                                _isTokenSent ? "Reset Password" : "Confirm Email",
+                                maxLines: 1,
+                                overflow: TextOverflow.visible,
+                                softWrap: false,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,

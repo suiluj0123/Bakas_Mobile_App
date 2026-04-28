@@ -727,8 +727,8 @@ class _publicGroupPageState extends State<publicGroupPage> {
                        );
                         if (res.statusCode == 200) {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bakas successful!")));
-                          _fetchPublicGroups(); // Refresh group data
-                          PlayerBalanceWidget.refresh(); // Automatically update balance in header
+                          _fetchPublicGroups(); 
+                          PlayerBalanceWidget.refresh();
                         } else {
                          final payload = jsonDecode(res.body);
                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(payload['message'] ?? "Error placing bet")));

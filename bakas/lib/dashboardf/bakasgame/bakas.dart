@@ -31,9 +31,7 @@ class _BakasPageState extends State<BakasPage> {
           bottom: false,
           child: Column(
             children: [
-              //balance widget import nlang para di na gagawa every page
               PlayerBalanceWidget(playerId: widget.playerId ?? SessionService().playerId),
-              //White container widget din i2
               WhiteContainer(
                 child: Column(
                   children: [
@@ -53,7 +51,6 @@ class _BakasPageState extends State<BakasPage> {
                         ),
                       ],
                     ),
-                    //Bakas o bFX ituuuu
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

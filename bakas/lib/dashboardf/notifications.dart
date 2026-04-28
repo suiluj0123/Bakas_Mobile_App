@@ -192,16 +192,31 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ),
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.done_all, color: Colors.white),
-              tooltip: 'Mark all as read',
+            TextButton(
               onPressed: _markAllAsRead,
+              child: const Text(
+                'Mark all as read',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.delete_sweep_rounded, color: Colors.white),
-              tooltip: 'Clear all',
+            TextButton(
               onPressed: _confirmDeleteAll,
+              child: const Text(
+                'Delete',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
+            const SizedBox(width: 8),
           ],
         ),
         body: SafeArea(
@@ -401,12 +416,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        _getTypeIcon(notif.type),
-                        size: 16,
-                        color: const Color(0xFF910D0D),
-                      ),
-                      const SizedBox(width: 6),
+                      if (notif.type != 'upcoming' && notif.type != 'result')
+                        Icon(
+                          _getTypeIcon(notif.type),
+                          size: 16,
+                          color: const Color(0xFF910D0D),
+                        ),
+                      if (notif.type != 'upcoming' && notif.type != 'result')
+                        const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           notif.title,
@@ -459,26 +476,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         style: const TextStyle(
                           fontSize: 11,
                           color: Colors.blue,
-                          fontFamily: 'Montserrat',
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Time:',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                          fontFamily: 'Montserrat',
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        time,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF910D0D),
                           fontFamily: 'Montserrat',
                           fontWeight: FontWeight.w500,
                         ),

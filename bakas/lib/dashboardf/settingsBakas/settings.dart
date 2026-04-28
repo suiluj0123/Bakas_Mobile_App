@@ -265,7 +265,6 @@ class _settingPageState extends State<settingPage> {
         if (payload['ok'] == true) {
           setState(() {
             _profileData = payload['data'];
-            // Initialize controllers
             _lastNameController.text = _profileData?['last_name'] ?? '';
             _firstNameController.text = _profileData?['first_name'] ?? '';
             _middleNameController.text = _profileData?['middle_name'] ?? '';
@@ -325,7 +324,6 @@ class _settingPageState extends State<settingPage> {
         ));
       }
 
-      // ID Photo
       if (_idBytes != null && _idXFile != null) {
         request.files.add(http.MultipartFile.fromBytes(
           'id_photo',
@@ -344,7 +342,6 @@ class _settingPageState extends State<settingPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Profile updated successfully')),
           );
-          // Clear picked files after successful upload
           setState(() {
             _profileXFile = null;
             _profileBytes = null;

@@ -19,21 +19,22 @@ class NotificationModel {
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
-      id: json['id'],
-      userId: json['user_id'],
-      title: json['title'],
-      message: json['message'],
+      id: json['id'] ?? 0,
+      userId: json['user_id'] ?? 0,
+      title: json['title'] ?? '',
+      message: json['message'] ?? '',
       type: json['type'] ?? 'general',
       isRead: json['is_read'] == 1 || json['is_read'] == true,
       createdAt: () {
-        DateTime utc = DateTime.parse(json['created_at'].toString().endsWith('Z')
-            ? json['created_at']
-            : json['created_at'] + 'Z');
-
-        if (utc.toLocal().isAtSameMomentAs(utc)) {
-          return utc.add(const Duration(hours: 8));
+        try {
+          String dateStr = json['created_at'].toString().replaceAll(' ', 'T');
+          if (!dateStr.contains('Z') && !dateStr.contains('+')) {
+            dateStr += 'Z';
+          }
+          return DateTime.parse(dateStr).toUtc().add(const Duration(hours: 8));
+        } catch (e) {
+          return DateTime.now();
         }
-        return utc.toLocal();
       }(),
     );
   }

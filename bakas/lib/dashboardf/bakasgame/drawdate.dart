@@ -40,14 +40,12 @@ class _DrawdatePageState extends State<DrawdatePage> {
 
   Future<void> _fetchUpcomingDraws() async {
     try {
-      // 1. Fetch Draws
       final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/draws/upcoming'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {
           final draws = payload['data'] ?? [];
 
-          // 2. Sort Draws: Upcoming/Ongoing first, Completed last
           draws.sort((a, b) {
             String statusA = _getDisplayStatus(a['status'], a['draw_date'], a['cutoff_date']);
             String statusB = _getDisplayStatus(b['status'], b['draw_date'], b['cutoff_date']);

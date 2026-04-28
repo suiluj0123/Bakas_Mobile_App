@@ -36,7 +36,8 @@ async function getDrawResults() {
 
 async function getDrawById(id) {
   const [rows] = await pool.execute(
-    `SELECT d.*, l.name as game_name, l.prize, l.start_range, l.end_range, l.number_of_selection, l.type_of_game
+    `SELECT d.*, l.name as game_name, l.prize, l.start_range, l.end_range, l.number_of_selection, l.type_of_game,
+            (SELECT g.price_per_share FROM \`groups\` g WHERE g.drawdate_id = d.id AND g.lotterytype_id = 1 AND g.deleted_at IS NULL LIMIT 1) as price_per_share
      FROM draws d 
      JOIN lotteries l ON d.lottery_id = l.id
      WHERE d.id = ? AND d.deleted_at IS NULL LIMIT 1`,

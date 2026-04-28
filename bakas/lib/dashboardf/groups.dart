@@ -30,7 +30,6 @@ class _GroupsPageState extends State<GroupsPage> {
     _fetchGroups();
   }
 
-  // ─── API Calls ───────────────────────────────────────────────────
 
   Future<void> _fetchGroups() async {
     if (widget.playerId == null) {
@@ -38,12 +37,10 @@ class _GroupsPageState extends State<GroupsPage> {
       return;
     }
     try {
-      // Fetch My Groups
       final myRes = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/api/groups/my/${widget.playerId}'),
       );
       
-      // Fetch Public Groups
       final pubRes = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/api/groups/public'),
       );
@@ -83,7 +80,6 @@ class _GroupsPageState extends State<GroupsPage> {
         await _fetchGroups();
         return true;
       }
-      // Show server error message
       if (mounted && payload['message'] != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${payload['message']}'), backgroundColor: Colors.red),
@@ -196,7 +192,6 @@ class _GroupsPageState extends State<GroupsPage> {
     return false;
   }
 
-  // ─── Dialogs ─────────────────────────────────────────────────────
 
   void showCreateDialog() {
     final nameController = TextEditingController();
@@ -589,7 +584,6 @@ class _GroupsPageState extends State<GroupsPage> {
     );
   }
 
-  // ─── Build ───────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {

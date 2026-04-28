@@ -16,7 +16,6 @@ class IdValidationResult {
 class IdValidationService {
   final TextRecognizer _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
-  // Keywords to identify PH Government IDs
   static const Map<String, List<String>> _idKeywords = {
     'UMID': ['UNIFIED MULTI-PURPOSE ID', 'CRN', 'SSS'],
     'PhilID (National ID)': ['PHILIPPINE IDENTIFICATION', 'PhilSys', 'NATIONAL ID'],

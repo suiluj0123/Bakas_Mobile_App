@@ -29,7 +29,6 @@ class _TicketsUIState extends State<TicketsUI> {
   }
 
   Future<void> _fetchTickets() async {
-    // Attempt to get playerId from widget or from Route arguments
     int? effectiveId = widget.playerId;
     if (effectiveId == null) {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;

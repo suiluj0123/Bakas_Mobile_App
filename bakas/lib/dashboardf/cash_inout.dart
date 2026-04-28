@@ -464,7 +464,6 @@ class _CashInOutPageState extends State<CashInOutPage> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Find specific wallets
     final gcash = _linkedWallets.firstWhere((w) => w['wallet_type'] == 'GCash', orElse: () => null);
     final maya = _linkedWallets.firstWhere((w) => w['wallet_type'] == 'Maya', orElse: () => null);
 

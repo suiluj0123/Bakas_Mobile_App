@@ -290,7 +290,6 @@ class _chooseGameState extends State<chooseGamePage> {
                         height: 20,
                       ),
                     ),
-                    //choices ng groups public ba or private 
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -322,7 +321,7 @@ class _chooseGameState extends State<chooseGamePage> {
                                   ],
                                 ),
                                 child: Image.asset(
-                                  'assets/public_group_icon.png', // Fallback if file not exists
+                                  'assets/public_group_icon.png',
                                   width: 45,
                                   height: 45,
                                   color: Colors.white,
@@ -371,7 +370,7 @@ class _chooseGameState extends State<chooseGamePage> {
                                   ],
                                 ),
                                 child: Image.asset(
-                                  'assets/private_group_icon.png', // Fallback if file not exists
+                                  'assets/private_group_icon.png', 
                                   width: 45,
                                   height: 45,
                                   color: Colors.white,

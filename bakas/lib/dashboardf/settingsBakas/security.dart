@@ -53,7 +53,6 @@ class _securityPageState extends State<securityPage> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Check old password
       final checkRes = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/api/settings/checkPassword'),
         headers: {'Content-Type': 'application/json'},
@@ -70,7 +69,6 @@ class _securityPageState extends State<securityPage> {
         return;
       }
 
-      // 2. Update password
       final updateRes = await http.put(
         Uri.parse('${ApiConfig.baseUrl}/api/settings/changePassword'),
         headers: {'Content-Type': 'application/json'},
