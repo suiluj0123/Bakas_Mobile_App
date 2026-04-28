@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../app_drawer.dart';
@@ -8,6 +6,7 @@ import '../../services/session_service.dart';
 import '/widgets/BakasHeader.dart';
 import '/widgets/WhiteContainer.dart';
 import '/widgets/backgroundRed.dart';
+import '../../services/api_config.dart';
 
 class walletPage extends StatefulWidget {
   final String? firstName;
@@ -40,11 +39,6 @@ class _walletPageState extends State<walletPage> {
     super.dispose();
   }
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   Future<void> _fetchWallets() async {
     final effectivePlayerId = widget.playerId ?? SessionService().playerId;
@@ -54,7 +48,7 @@ class _walletPageState extends State<walletPage> {
       return;
     }
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/wallet/$effectivePlayerId'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/settings/wallet/$effectivePlayerId'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {
@@ -93,7 +87,7 @@ class _walletPageState extends State<walletPage> {
     
     try {
       final res = await http.post(
-        Uri.parse('${_apiBaseUrl()}/api/settings/addWallet'),
+        Uri.parse('${ApiConfig.baseUrl}/api/settings/addWallet'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'playerId': effectivePlayerId,
@@ -137,7 +131,7 @@ class _walletPageState extends State<walletPage> {
     if (_accountNumberController.text.isEmpty) return;
     try {
       final res = await http.put(
-        Uri.parse('${_apiBaseUrl()}/api/settings/editWallet'),
+        Uri.parse('${ApiConfig.baseUrl}/api/settings/editWallet'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'playerId': widget.playerId,
@@ -330,51 +324,55 @@ class _walletPageState extends State<walletPage> {
         ),
         body: SafeArea(
           bottom: false,
-          child: WhiteContainer(
-            child: Padding(
-              padding: const EdgeInsets.all(15.0),
-              child: Column(
-                children: [
-                  Row(
+          child: Column(
+            children: [
+              WhiteContainer(
+                child: Padding(
+                  padding: const EdgeInsets.all(15.0),
+                  child: Column(
                     children: [
-                      _navButton('Profile', '/setting'),
-                      _navButton('Wallet', '/wallet'),
-                      _navButton('Security', '/security'),
+                      Row(
+                        children: [
+                          _navButton('Profile', '/setting'),
+                          _navButton('Wallet', '/wallet'),
+                          _navButton('Security', '/security'),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                      Expanded(
+                        child: _isLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : SingleChildScrollView(
+                                child: Column(
+                                  children: [
+                                    if (_wallets.isEmpty)
+                                      const Padding(
+                                        padding: EdgeInsets.all(20.0),
+                                        child: Text("No wallet linked yet."),
+                                      ),
+                                    ..._wallets.map((wallet) => _walletCard(wallet)).toList(),
+                                    const SizedBox(height: 40),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 55,
+                                      child: ElevatedButton(
+                                        onPressed: () => LinkWalletModal(context),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF8B0000),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                        ),
+                                        child: const Text("Link Wallet", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 30),
-                  Expanded(
-                    child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                if (_wallets.isEmpty)
-                                  const Padding(
-                                    padding: EdgeInsets.all(20.0),
-                                    child: Text("No wallet linked yet."),
-                                  ),
-                                ..._wallets.map((wallet) => _walletCard(wallet)).toList(),
-                                const SizedBox(height: 40),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 55,
-                                  child: ElevatedButton(
-                                    onPressed: () => LinkWalletModal(context),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF8B0000),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                    ),
-                                    child: const Text("Link Wallet", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -455,4 +453,4 @@ class _walletPageState extends State<walletPage> {
       ),
     );
   }
-}
+}

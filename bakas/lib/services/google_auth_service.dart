@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'api_config.dart';
 
 class GoogleAuthService {
 
@@ -15,11 +15,6 @@ class GoogleAuthService {
     serverClientId: kIsWeb ? null : '819875755268-bmth1hm5v3hj4v6usbm6aqa6tap7oh5r.apps.googleusercontent.com',
   );
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   Future<Map<String, dynamic>?> signInWithGoogle() async {
     try {
@@ -41,7 +36,7 @@ class GoogleAuthService {
       }
 
       final response = await http.post(
-        Uri.parse('${_apiBaseUrl()}/auth/google'),
+        Uri.parse('${ApiConfig.baseUrl}/auth/google'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'idToken': idToken}),
       );

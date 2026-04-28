@@ -1,11 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../services/formatter.dart';
+import '../services/api_config.dart';
 
 class OperatorDashboardUI extends StatefulWidget {
   final int? operatorId;
@@ -22,11 +21,6 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
   List<dynamic> _draws = [];
   bool _isLoading = true;
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   Color _getStatusColor(String? status) {
     if (status == null) return Colors.grey;
@@ -80,8 +74,8 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
     try {
-      final lotResponse = await http.get(Uri.parse('${_apiBaseUrl()}/api/lotteries'));
-      final drawResponse = await http.get(Uri.parse('${_apiBaseUrl()}/api/draws/upcoming'));
+      final lotResponse = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/lotteries'));
+      final drawResponse = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/draws/upcoming'));
 
       if (lotResponse.statusCode == 200 && drawResponse.statusCode == 200) {
         setState(() {
@@ -123,7 +117,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
             onPressed: () async {
               try {
                 final response = await http.post(
-                  Uri.parse('${_apiBaseUrl()}/api/operators/lotteries'),
+                  Uri.parse('${ApiConfig.baseUrl}/api/operators/lotteries'),
                   headers: {'Content-Type': 'application/json'},
                   body: jsonEncode({
                     'name': nameController.text,
@@ -191,7 +185,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
             onPressed: () async {
               try {
                 final response = await http.put(
-                  Uri.parse('${_apiBaseUrl()}/api/operators/lotteries/${lottery['id']}'),
+                  Uri.parse('${ApiConfig.baseUrl}/api/operators/lotteries/${lottery['id']}'),
                   headers: {'Content-Type': 'application/json'},
                   body: jsonEncode({
                     'name': nameController.text,
@@ -324,7 +318,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
                 try {
                   final selectedLottery = _lotteries.firstWhere((l) => l['id'] == selectedLotteryId);
                   final response = await http.post(
-                    Uri.parse('${_apiBaseUrl()}/api/operators/draws'),
+                    Uri.parse('${ApiConfig.baseUrl}/api/operators/draws'),
                     headers: {'Content-Type': 'application/json'},
                     body: jsonEncode({
                       'name': selectedLottery['name'], // Using actual lottery name
@@ -446,7 +440,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
                 try {
                   final selectedLottery = _lotteries.firstWhere((l) => l['id'] == selectedLotteryId);
                   final response = await http.put(
-                    Uri.parse('${_apiBaseUrl()}/api/draws/${draw['id']}'),
+                    Uri.parse('${ApiConfig.baseUrl}/api/draws/${draw['id']}'),
                     headers: {'Content-Type': 'application/json'},
                     body: jsonEncode({
                       'name': selectedLottery['name'], // Using actual lottery name
@@ -496,7 +490,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () async {
               try {
-                final response = await http.delete(Uri.parse('${_apiBaseUrl()}/api/draws/${draw['id']}'));
+                final response = await http.delete(Uri.parse('${ApiConfig.baseUrl}/api/draws/${draw['id']}'));
                 if (response.statusCode == 200) {
                   Navigator.pop(ctx);
                   _fetchData();
@@ -527,7 +521,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () async {
               try {
-                final response = await http.delete(Uri.parse('${_apiBaseUrl()}/api/operators/lotteries/${lottery['id']}'));
+                final response = await http.delete(Uri.parse('${ApiConfig.baseUrl}/api/operators/lotteries/${lottery['id']}'));
                 if (response.statusCode == 200) {
                   Navigator.pop(ctx);
                   _fetchData();
@@ -697,8 +691,8 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
     Future<void> fetchGroups() async {
       try {
         final url = draw == null 
-          ? '${_apiBaseUrl()}/api/groups/public' 
-          : '${_apiBaseUrl()}/api/groups/public?drawId=${draw['id']}';
+          ? '${ApiConfig.baseUrl}/api/groups/public' 
+          : '${ApiConfig.baseUrl}/api/groups/public?drawId=${draw['id']}';
         final res = await http.get(Uri.parse(url));
         if (res.statusCode == 200) {
           final payload = jsonDecode(res.body);
@@ -775,7 +769,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
                                       ),
                                     );
                                     if (confirm == true) {
-                                      await http.delete(Uri.parse('${_apiBaseUrl()}/api/groups/${g['id']}'));
+                                      await http.delete(Uri.parse('${ApiConfig.baseUrl}/api/groups/${g['id']}'));
                                       setDialogState(() => loading = true);
                                     }
                                   },
@@ -836,7 +830,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
                       onPressed: generating ? null : () async {
                         setDialogState(() => generating = true);
                         try {
-                          final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/operators/lucky-pick/${draw['lottery_id']}'));
+                          final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/operators/lucky-pick/${draw['lottery_id']}'));
                           if (res.statusCode == 200) {
                             final payload = jsonDecode(res.body);
                             setDialogState(() => numbersController.text = payload['data']);
@@ -875,7 +869,7 @@ class _OperatorDashboardUIState extends State<OperatorDashboardUI> {
             ElevatedButton(
               onPressed: () async {
                 try {
-                  final url = isEdit ? '${_apiBaseUrl()}/api/groups/${group['id']}' : '${_apiBaseUrl()}/api/groups';
+                  final url = isEdit ? '${ApiConfig.baseUrl}/api/groups/${group['id']}' : '${ApiConfig.baseUrl}/api/groups';
                   final body = {
                     'name': nameController.text,
                     'desc': descController.text,

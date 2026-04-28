@@ -13,7 +13,6 @@ async function createNotification(user_id, title, message, type = 'general') {
  *
  */
 async function broadcastNotification(title, message, type = 'general') {
-  // Using INSERT INTO ... SELECT to efficiently create notifications for all players
   const [result] = await pool.execute(
     `INSERT INTO notifications (user_id, title, message, type, is_read, created_at)
      SELECT id, ?, ?, ?, FALSE, UTC_TIMESTAMP() FROM players WHERE deleted_at IS NULL`,
@@ -58,11 +57,6 @@ async function markAllAsRead(user_id) {
   return result.affectedRows;
 }
 
-/**
- * Logic for Ongoing Game notifications:
- * Finds games closing in 30-60 mins that haven't had an 'ongoing' notification yet.
- * This is a simplified version; in a real app, you'd likely track which notifications have been sent.
- */
 async function getImpendingCutoffs() {
   const [rows] = await pool.execute(
     `SELECT d.*, l.name as game_name 

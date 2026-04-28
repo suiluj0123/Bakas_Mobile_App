@@ -1,9 +1,9 @@
+
 import 'dart:convert';
-import 'dart:io';
 import 'dart:ui';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'services/api_config.dart';
 
 class ForgetPasswordUI extends StatefulWidget {
   const ForgetPasswordUI({super.key});
@@ -22,11 +22,6 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
   String? _errorText;
   String? _successMessage;
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   Future<void> _handleRequestToken() async {
     setState(() {
@@ -45,7 +40,7 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
       }
 
       final res = await http.post(
-        Uri.parse('${_apiBaseUrl()}/forgot-password'),
+        Uri.parse('${ApiConfig.baseUrl}/forgot-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );
@@ -95,7 +90,7 @@ class _ForgetPasswordUIState extends State<ForgetPasswordUI> {
       }
 
       final res = await http.post(
-        Uri.parse('${_apiBaseUrl()}/reset-password'),
+        Uri.parse('${ApiConfig.baseUrl}/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,

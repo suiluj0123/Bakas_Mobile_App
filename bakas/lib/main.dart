@@ -22,7 +22,6 @@ import 'dashboardf/bakasgame/startbet.dart';
 import 'dashboardf/bakasgame/results.dart';
 import 'operator/operator_dashboard.dart';
 
-
 void main() {
   runApp(const MyApp());
 }

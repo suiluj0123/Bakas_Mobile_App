@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -12,6 +10,7 @@ import '../../widgets/WhiteContainer.dart';
 import '../../widgets/backgroundRed.dart';
 import '../../widgets/BackButton.dart';
 import '../../services/session_service.dart';
+import '../../services/api_config.dart';
 
 class startBetPage extends StatefulWidget {
   final String? firstName;
@@ -53,17 +52,12 @@ class _startBetPageState extends State<startBetPage> {
     super.dispose();
   }
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   Future<void> _fetchBalance() async {
     final effectivePlayerId = widget.playerId ?? SessionService().playerId;
     if (effectivePlayerId == null) return;
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=$effectivePlayerId'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/payments/stats?playerId=$effectivePlayerId'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true && payload['data'] != null) {
@@ -91,7 +85,7 @@ class _startBetPageState extends State<startBetPage> {
     }
 
     try {
-      final url = '${_apiBaseUrl()}/api/draws/$drawId';
+      final url = '${ApiConfig.baseUrl}/api/draws/$drawId';
       debugPrint('startbet.dart: Fetching from $url');
       final res = await http.get(Uri.parse(url));
       debugPrint('startbet.dart: statusCode=${res.statusCode}');
@@ -331,7 +325,7 @@ class _startBetPageState extends State<startBetPage> {
     try {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       final res = await http.post(
-        Uri.parse('${_apiBaseUrl()}/api/bets/create-tickets'),
+        Uri.parse('${ApiConfig.baseUrl}/api/bets/create-tickets'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'playerId': widget.playerId,

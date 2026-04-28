@@ -1,10 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:ui';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:http/http.dart' as http;
+import 'services/api_config.dart';
 import 'dashboard.dart';
 import 'operator/operator_dashboard.dart';
 import 'services/google_auth_service.dart';
@@ -32,11 +31,6 @@ class _GlassLoginScreenState extends State<_GlassLoginScreen> {
   bool _isLoading = false;
   String? _errorText;
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   Future<void> _handleGoogleSignIn() async {
     setState(() {
@@ -105,7 +99,7 @@ class _GlassLoginScreenState extends State<_GlassLoginScreen> {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
       final res = await http.post(
-        Uri.parse('${_apiBaseUrl()}/login'),
+        Uri.parse('${ApiConfig.baseUrl}/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );

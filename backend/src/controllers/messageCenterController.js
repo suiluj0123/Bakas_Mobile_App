@@ -51,9 +51,7 @@ async function markAsRead(req, res) {
   }
 }
 
-/**
- * Delete a message
- */
+
 async function deleteMessage(req, res) {
   try {
     const { id } = req.params;

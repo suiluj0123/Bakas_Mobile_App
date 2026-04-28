@@ -1,8 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/BakasHeader.dart';
@@ -12,6 +9,7 @@ import '../../widgets/BackButton.dart';
 import '../app_drawer.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import '../../services/api_config.dart';
 
 
 class privateGroupPage extends StatefulWidget {
@@ -34,11 +32,6 @@ class _privateGroupPageState extends State<privateGroupPage> {
   Timer? _chatTimer;
 
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -66,7 +59,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
     }
 
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/draws/$drawId'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/draws/$drawId'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {
@@ -138,7 +131,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
       return;
     }
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/groups/private/available/$playerId'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/groups/private/available/$playerId'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {
@@ -248,7 +241,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
       builder: (context) => AlertDialog(
         title: Text("Group Members"),
         content: FutureBuilder<http.Response>(
-          future: http.get(Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/members')),
+          future: http.get(Uri.parse('${ApiConfig.baseUrl}/api/groups/${group['id']}/members')),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return SizedBox(height: 100, child: Center(child: CircularProgressIndicator()));
@@ -304,7 +297,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
 
     void fetchMessages(StateSetter setDialogState) async {
       try {
-        final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/messages'));
+        final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/groups/${group['id']}/messages'));
         if (res.statusCode == 200) {
           final payload = jsonDecode(res.body);
           if (mounted) {
@@ -326,155 +319,155 @@ class _privateGroupPageState extends State<privateGroupPage> {
 
     _chatTimer?.cancel();
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            if (_chatTimer == null || !_chatTimer!.isActive) {
-              fetchMessages(setDialogState);
-              _chatTimer = Timer.periodic(Duration(seconds: 5), (timer) {
-                fetchMessages(setDialogState);
-              });
-            }
+  showDialog(
+  context: context,
+  builder: (context) {
+  return StatefulBuilder(
+  builder: (context, setDialogState) {
+    if (_chatTimer == null || !_chatTimer!.isActive) {
+      fetchMessages(setDialogState);
+      _chatTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+        fetchMessages(setDialogState);
+      });
+    }
 
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Row(
-                children: [
-                  Icon(Icons.chat_bubble, color: Color(0xFF8B0000)),
-                  SizedBox(width: 10),
-                  Expanded(child: Text("Chat: ${group['name']}", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    height: 300,
-                    width: double.maxFinite,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: messages.isEmpty
-                        ? Center(child: Text("No messages yet", style: TextStyle(color: Colors.grey)))
-                        : ListView.builder(
-                            reverse: false, 
-                            itemCount: messages.length,
-                            itemBuilder: (context, index) {
-                              final msg = messages[index];
-                              final bool isMe = msg['sender_id'].toString() == playerId.toString();
-                              return Padding(
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Icon(Icons.chat_bubble, color: Color(0xFF8B0000)),
+          SizedBox(width: 10),
+          Expanded(child: Text("Chat: ${group['name']}", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            height: 300,
+            width: double.maxFinite,
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: messages.isEmpty
+                ? Center(child: Text("No messages yet", style: TextStyle(color: Colors.grey)))
+                : ListView.builder(
+                    reverse: false, 
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = messages[index];
+                      final bool isMe = msg['sender_id'].toString() == playerId.toString();
+                      return Padding(
 
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                child: Column(
-                                  crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (!isMe) ...[
-                                          Text(
-                                            msg['sender_name'] ?? "Unknown",
-                                            style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.bold),
-                                          ),
-                                          SizedBox(width: 5),
-                                        ],
-                                        Text(
-                                          _formatTime(msg['created_at']),
-                                          style: TextStyle(fontSize: 9, color: Colors.grey[400]),
-                                        ),
-                                        if (isMe) ...[
-                                          SizedBox(width: 5),
-                                          Text(
-                                            "You",
-                                            style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.bold),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                    Container(
-
-                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: isMe ? Color(0xFF8B0000) : Colors.white,
-                                        borderRadius: BorderRadius.circular(15),
-                                        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2)],
-                                      ),
-                                      child: Text(
-                                        msg['message'] ?? '',
-                                        style: TextStyle(color: isMe ? Colors.white : Colors.black87),
-                                      ),
-                                    ),
-                                  ],
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        child: Column(
+                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (!isMe) ...[
+                                  Text(
+                                    msg['sender_name'] ?? "Unknown",
+                                    style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.bold),
+                                  ),
+                                  SizedBox(width: 5),
+                                ],
+                                Text(
+                                  _formatTime(msg['created_at']),
+                                  style: TextStyle(fontSize: 9, color: Colors.grey[400]),
                                 ),
-                              );
-                            },
-                          ),
-                  ),
-                  SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: messageController,
-                          decoration: InputDecoration(
-                            hintText: "Type a message...",
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 5),
-                      isSending
-                          ? CircularProgressIndicator(strokeWidth: 2)
-                          : IconButton(
-                              icon: Icon(Icons.send, color: Color(0xFF8B0000)),
-                              onPressed: () async {
-                                if (messageController.text.trim().isEmpty) return;
-                                setDialogState(() => isSending = true);
-                                try {
-                                  final res = await http.post(
-                                    Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/messages'),
-                                    headers: {'Content-Type': 'application/json'},
-                                    body: jsonEncode({
-                                      'senderId': playerId,
-                                      'message': messageController.text.trim(),
-                                    }),
-                                  );
-
-                                  if (res.statusCode == 201) {
-                                    messageController.clear();
-                                    fetchMessages(setDialogState);
-                                  }
-                                } catch (e) {
-                                  debugPrint('Send error: $e');
-                                } finally {
-                                  setDialogState(() => isSending = false);
-                                }
-                              },
+                                if (isMe) ...[
+                                  SizedBox(width: 5),
+                                  Text(
+                                    "You",
+                                    style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ],
                             ),
-                    ],
+                            Container(
+
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isMe ? Color(0xFF8B0000) : Colors.white,
+                                borderRadius: BorderRadius.circular(15),
+                                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2)],
+                              ),
+                              child: Text(
+                                msg['message'] ?? '',
+                                style: TextStyle(color: isMe ? Colors.white : Colors.black87),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    _chatTimer?.cancel();
-                    Navigator.pop(context);
-                  },
-                  child: Text("Close"),
+          ),
+          SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: messageController,
+                  decoration: InputDecoration(
+                    hintText: "Type a message...",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(25)),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                  ),
                 ),
-              ],
-            );
+              ),
+              SizedBox(width: 5),
+              isSending
+                  ? CircularProgressIndicator(strokeWidth: 2)
+                  : IconButton(
+                      icon: Icon(Icons.send, color: Color(0xFF8B0000)),
+                      onPressed: () async {
+                        if (messageController.text.trim().isEmpty) return;
+                        setDialogState(() => isSending = true);
+                        try {
+                          final res = await http.post(
+                            Uri.parse('${ApiConfig.baseUrl}/api/groups/${group['id']}/messages'),
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode({
+                              'senderId': playerId,
+                              'message': messageController.text.trim(),
+                            }),
+                          );
+
+                          if (res.statusCode == 201) {
+                            messageController.clear();
+                            fetchMessages(setDialogState);
+                          }
+                        } catch (e) {
+                          debugPrint('Send error: $e');
+                        } finally {
+                          setDialogState(() => isSending = false);
+                        }
+                      },
+                    ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            _chatTimer?.cancel();
+            Navigator.pop(context);
           },
-        );
-      },
-    ).then((_) {
-      _chatTimer?.cancel();
-    });
+          child: Text("Close"),
+        ),
+      ],
+    );
+  },
+  );
+  },
+  ).then((_) {
+  _chatTimer?.cancel();
+  });
   }
 
 
@@ -519,7 +512,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
                       if (searchController.text.isEmpty) return;
                       setState(() => isSearching = true);
                       try {
-                        final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/players/search?q=${searchController.text}'));
+                        final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/players/search?q=${searchController.text}'));
                         if (res.statusCode == 200) {
                           final payload = jsonDecode(res.body);
                           setState(() {
@@ -548,7 +541,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
                         trailing: ElevatedButton(
                           onPressed: () async {
                             final res = await http.post(
-                              Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/invite'),
+                              Uri.parse('${ApiConfig.baseUrl}/api/groups/${group['id']}/invite'),
                               headers: {'Content-Type': 'application/json'},
                               body: jsonEncode({
                                 'player_id': p['id'],
@@ -593,7 +586,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
             onPressed: () async {
               if (codeController.text.isNotEmpty) {
                 final res = await http.post(
-                  Uri.parse('${_apiBaseUrl()}/api/groups/join-code'),
+                  Uri.parse('${ApiConfig.baseUrl}/api/groups/join-code'),
                   headers: {'Content-Type': 'application/json'},
                   body: jsonEncode({
                     'code': codeController.text.trim(),
@@ -636,7 +629,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
                 final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
                 final drawId = widget.drawId ?? args?['drawId'];
                 final res = await http.post(
-                  Uri.parse('${_apiBaseUrl()}/api/groups'),
+                  Uri.parse('${ApiConfig.baseUrl}/api/groups'),
                   headers: {'Content-Type': 'application/json'},
                   body: jsonEncode({
                     'name': nameController.text,
@@ -718,7 +711,7 @@ class _privateGroupPageState extends State<privateGroupPage> {
                     onPressed: () async {
                       if (group['pgroup_code'] != null) {
                          final res = await http.post(
-                          Uri.parse('${_apiBaseUrl()}/api/groups/join-code'),
+                          Uri.parse('${ApiConfig.baseUrl}/api/groups/join-code'),
                           headers: {'Content-Type': 'application/json'},
                           body: jsonEncode({
                             'code': group['pgroup_code'],

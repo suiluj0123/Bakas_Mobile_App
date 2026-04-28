@@ -1,8 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/BakasHeader.dart';
@@ -13,6 +10,7 @@ import '../app_drawer.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../../services/formatter.dart';
+import '../../services/api_config.dart';
 
 
 class publicGroupPage extends StatefulWidget {
@@ -38,11 +36,6 @@ class _publicGroupPageState extends State<publicGroupPage> {
   double _playerBalance = 0.0;
 
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -69,7 +62,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
     }
 
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/draws/$drawId'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/draws/$drawId'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {
@@ -125,7 +118,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
     final lotteryId = widget.lotteryId ?? args?['lotteryId'];
     final playerId = widget.playerId ?? args?['playerId'];
     try {
-      String url = '${_apiBaseUrl()}/api/groups/public?';
+      String url = '${ApiConfig.baseUrl}/api/groups/public?';
       if (drawId != null) url += 'drawId=$drawId&';
       if (lotteryId != null) url += 'lotteryId=$lotteryId&';
       if (playerId != null) url += 'playerId=$playerId';
@@ -248,7 +241,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
       builder: (context) => AlertDialog(
         title: Text("Group Members"),
         content: FutureBuilder<http.Response>(
-          future: http.get(Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/members')),
+          future: http.get(Uri.parse('${ApiConfig.baseUrl}/api/groups/${group['id']}/members')),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return SizedBox(height: 100, child: Center(child: CircularProgressIndicator()));
@@ -304,7 +297,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
 
     void fetchMessages(StateSetter setDialogState) async {
       try {
-        final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/messages'));
+        final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/groups/${group['id']}/messages'));
         if (res.statusCode == 200) {
           final payload = jsonDecode(res.body);
           if (mounted) {
@@ -436,7 +429,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
                                 setDialogState(() => isSending = true);
                                 try {
                                   final res = await http.post(
-                                    Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/messages'),
+                                    Uri.parse('${ApiConfig.baseUrl}/api/groups/${group['id']}/messages'),
                                     headers: {'Content-Type': 'application/json'},
                                     body: jsonEncode({
                                       'senderId': playerId,
@@ -519,7 +512,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
                       if (searchController.text.isEmpty) return;
                       setState(() => isSearching = true);
                       try {
-                        final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/players/search?q=${searchController.text}'));
+                        final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/players/search?q=${searchController.text}'));
                         if (res.statusCode == 200) {
                           final payload = jsonDecode(res.body);
                           setState(() {
@@ -548,7 +541,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
                         trailing: ElevatedButton(
                           onPressed: () async {
                             final res = await http.post(
-                              Uri.parse('${_apiBaseUrl()}/api/groups/${group['id']}/invite'),
+                              Uri.parse('${ApiConfig.baseUrl}/api/groups/${group['id']}/invite'),
                               headers: {'Content-Type': 'application/json'},
                               body: jsonEncode({
                                 'player_id': p['id'],
@@ -724,7 +717,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
                    if (confirm == true) {
                      try {
                        final res = await http.post(
-                         Uri.parse('${_apiBaseUrl()}/api/bets/bakas-public'),
+                         Uri.parse('${ApiConfig.baseUrl}/api/bets/bakas-public'),
                          headers: {'Content-Type': 'application/json'},
                          body: jsonEncode({
                            'playerId': playerId,
@@ -827,7 +820,7 @@ class _publicGroupPageState extends State<publicGroupPage> {
                   final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
                   final drawId = widget.drawId ?? args?['drawId'];
                   final res = await http.post(
-                    Uri.parse('${_apiBaseUrl()}/api/groups'),
+                    Uri.parse('${ApiConfig.baseUrl}/api/groups'),
                     headers: {'Content-Type': 'application/json'},
                     body: jsonEncode({
                       'name': nameController.text,

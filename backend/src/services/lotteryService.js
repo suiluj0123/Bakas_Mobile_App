@@ -84,7 +84,7 @@ async function processDraw(drawId, winningNumbers) {
         );
 
         await messageCenterModel.createMessage({
-          senderId: 0, // System
+          senderId: 0,
           receiverId: bet.player_id,
           subject: 'Congratulations! You are a Winner!',
           content: `Your unmatched luck! Your ticket for matched ${matches} numbers. 

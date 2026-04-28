@@ -25,7 +25,7 @@ async function profileUpdate(data) {
         id_number,
         id_photo
     } = data;
-    console.log(data);
+    
     const [result] = await pool.execute(
         `UPDATE players
             SET
@@ -102,7 +102,6 @@ async function add_wallet(data) {
     }
     const walletId = types[0].id;
 
-    // 2. Insert into player_wallets
     const [result] = await pool.query(
         `INSERT INTO player_wallets (player_id, wallet_id, account_number, link_status, created_by, created_at) 
          VALUES (?, ?, ?, 1, ?, NOW())`,

@@ -41,15 +41,12 @@ async function createDraw(req, res) {
   try {
     const { lottery_id, name: receivedName } = req.body;
     
-    // Fetch lottery to get the actual name
     const lottery = await lotteryModel.getLotteryById(lottery_id);
     const actualName = lottery ? lottery.name : (receivedName || `Draw for ${lottery_id}`);
     
-    // Ensure we use the actual name for creation
     const drawData = { ...req.body, name: actualName };
     const result = await drawModel.createDraw(drawData);
 
-    // Broadcast notification to all players for the new upcoming game
     try {
       const drawDate = req.body.draw_date
         ? new Date(req.body.draw_date).toLocaleString('en-PH', {
@@ -79,7 +76,6 @@ async function updateDraw(req, res) {
     const { id } = req.params;
     const { lottery_id, name: receivedName } = req.body;
 
-    // Fetch lottery to get the actual name if lottery_id is provided
     let actualName = receivedName;
     if (lottery_id) {
       const lottery = await lotteryModel.getLotteryById(lottery_id);

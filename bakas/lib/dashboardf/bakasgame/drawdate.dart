@@ -1,5 +1,4 @@
-import 'package:flutter/foundation.dart';
-import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +10,7 @@ import '../../widgets/WhiteContainer.dart';
 import '../../widgets/backgroundRed.dart';
 import '../../widgets/BackButton.dart';
 import '../../services/formatter.dart';
+import '../../services/api_config.dart';
 
 class DrawdatePage extends StatefulWidget {
   final String? firstName;
@@ -30,11 +30,6 @@ class _DrawdatePageState extends State<DrawdatePage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -46,7 +41,7 @@ class _DrawdatePageState extends State<DrawdatePage> {
   Future<void> _fetchUpcomingDraws() async {
     try {
       // 1. Fetch Draws
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/draws/upcoming'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/draws/upcoming'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {
@@ -690,7 +685,6 @@ class _DrawdatePageState extends State<DrawdatePage> {
                   _focusedDay = focusedDay;
                 });
                 
-                // If there's exactly one game, show the modal directly
                 if (events.length == 1) {
                   final draw = events.first;
                   final statusText = _getDisplayStatus(draw['status'], draw['draw_date'], draw['cutoff_date']);

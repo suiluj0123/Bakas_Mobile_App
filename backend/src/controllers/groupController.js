@@ -15,7 +15,6 @@ async function createGroup(req, res) {
 
     res.status(201).json({ ok: true, data: result });
   } catch (error) {
-    console.error('[Groups] Create error:', error.message);
     res.status(500).json({ ok: false, message: error.message });
   }
 }
@@ -23,11 +22,9 @@ async function createGroup(req, res) {
 async function getPublicGroups(req, res) {
   try {
     const { drawId, playerId, lotteryId } = req.query;
-    console.log(`[Groups] Fetch Request - Draw:${drawId}, Player:${playerId}, Game:${lotteryId}`);
     const groups = await groupModel.getPublicGroups(drawId, playerId, lotteryId);
     res.status(200).json({ ok: true, data: groups });
   } catch (error) {
-    console.error('[Groups] Fetch error:', error.message);
     res.status(500).json({ ok: false, message: error.message });
   }
 }

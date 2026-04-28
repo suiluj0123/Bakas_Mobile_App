@@ -52,17 +52,12 @@ async function markAllRead(req, res) {
   }
 }
 
-/**
- * Trigger for "Ongoing" notifications.
- * This can be called by a cron job or manually for testing.
- */
 async function triggerOngoingNotifications(req, res) {
   try {
     const draws = await notificationModel.getImpendingCutoffs();
     let sentCount = 0;
     
     for (const draw of draws) {
-      // Create a broadcast notification for each impending draw
       const title = `Ongoing Game: ${draw.game_name}`;
       const message = `Don't miss out! The cutoff for ${draw.game_name} (${draw.name}) is in less than an hour. Play now!`;
       await notificationModel.broadcastNotification(title, message, 'ongoing');

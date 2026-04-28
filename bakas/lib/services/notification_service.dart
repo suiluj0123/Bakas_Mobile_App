@@ -1,24 +1,19 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/notification_model.dart';
+import 'api_config.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   Future<List<NotificationModel>> fetchNotifications(int playerId) async {
     try {
       final res = await http.get(
-        Uri.parse('${_apiBaseUrl()}/api/notifications?playerId=$playerId'),
+        Uri.parse('${ApiConfig.baseUrl}/api/notifications?playerId=$playerId'),
       );
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
@@ -37,7 +32,7 @@ class NotificationService {
   Future<int> fetchUnreadCount(int playerId) async {
     try {
       final res = await http.get(
-        Uri.parse('${_apiBaseUrl()}/api/notifications/unread-count?playerId=$playerId'),
+        Uri.parse('${ApiConfig.baseUrl}/api/notifications/unread-count?playerId=$playerId'),
       );
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
@@ -55,7 +50,7 @@ class NotificationService {
   Future<bool> markAsRead(int notificationId) async {
     try {
       final res = await http.put(
-        Uri.parse('${_apiBaseUrl()}/api/notifications/$notificationId/read'),
+        Uri.parse('${ApiConfig.baseUrl}/api/notifications/$notificationId/read'),
       );
       return res.statusCode == 200;
     } catch (e) {
@@ -67,7 +62,7 @@ class NotificationService {
   Future<bool> markAllAsRead(int playerId) async {
     try {
       final res = await http.post(
-        Uri.parse('${_apiBaseUrl()}/api/notifications/mark-all-read'),
+        Uri.parse('${ApiConfig.baseUrl}/api/notifications/mark-all-read'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'playerId': playerId}),
       );
@@ -81,7 +76,7 @@ class NotificationService {
   Future<bool> deleteNotification(int notificationId) async {
     try {
       final res = await http.delete(
-        Uri.parse('${_apiBaseUrl()}/api/notifications/$notificationId'),
+        Uri.parse('${ApiConfig.baseUrl}/api/notifications/$notificationId'),
       );
       return res.statusCode == 200;
     } catch (e) {
@@ -93,7 +88,7 @@ class NotificationService {
   Future<bool> deleteAll(int playerId) async {
     try {
       final res = await http.delete(
-        Uri.parse('${_apiBaseUrl()}/api/notifications/delete-all'),
+        Uri.parse('${ApiConfig.baseUrl}/api/notifications/delete-all'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'playerId': playerId}),
       );

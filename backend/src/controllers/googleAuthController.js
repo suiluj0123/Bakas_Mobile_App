@@ -47,7 +47,6 @@ async function googleLogin(req, res, next) {
       },
     });
   } catch (err) {
-    console.error('Google login error:', err);
     return next(err);
   }
 }

@@ -213,8 +213,6 @@ async function forgotPassword(req, res, next) {
 
     await savePasswordResetToken(normalizedEmail, token);
 
-    console.log(`[FORGOT PASSWORD] Generated token for ${normalizedEmail}: ${token}`);
-
     return res.status(200).json({
       ok: true,
       message: 'Password reset token generated.',

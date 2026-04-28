@@ -32,7 +32,7 @@ async function createGroup({ name, desc, status, group_type, created_by, drawdat
       pgroup_code,
       groupTypeFlag,
       drawdate_id || null,
-      lottery_id || 0, // Used by the first COALESCE subquery (specific lottery)
+      lottery_id || 0, 
       system_id || 4,
       isOperator ? created_by : null,
       name,
@@ -66,7 +66,6 @@ async function createGroup({ name, desc, status, group_type, created_by, drawdat
 
 
 async function getPublicGroups(drawId, playerId, lotteryId) {
-  // Convert inputs to numbers to prevent string vs int mismatches
   const dId = drawId && drawId !== 'undefined' ? parseInt(drawId) : 0;
   const lId = lotteryId && lotteryId !== 'undefined' ? parseInt(lotteryId) : 0;
   const pId = playerId && playerId !== 'undefined' ? parseInt(playerId) : 0;
@@ -102,7 +101,6 @@ async function getPublicGroups(drawId, playerId, lotteryId) {
   const [rows] = await pool.execute(query, params);
   
   if (rows.length === 0) {
-    console.log(`[Groups] Found 0 results for dId:${dId}, lId:${lId}. Check status and lotterytype_id in DB.`);
   }
 
   return rows;
@@ -159,7 +157,6 @@ async function getGroupByCode(code) {
 }
 
 async function updateGroup(id, { name, desc, status, target_bets, price_per_share, gen_numbers, system_id, max_per, drawdate_id }) {
-  // If status is a string like 'Active', map it. If it's already a number (from DB), keep it.
   let numericStatus = status;
   if (status === 'Active' || status === 'active') numericStatus = 1;
   if (status === 'Inactive' || status === 'inactive') numericStatus = 0;
@@ -212,9 +209,6 @@ async function addMember({ pgroup_code, player_id, player_name, user_code, name,
   return { id: result.insertId };
 }
 
-/**
- * 
- */
 async function getMembers(pgroupCode) {
   const [rows] = await pool.execute(
     `SELECT pg.id, pg.pgroup_code, pg.player_id, 
@@ -229,9 +223,7 @@ async function getMembers(pgroupCode) {
   return rows;
 }
 
-/**
- * 
- */
+
 async function getPendingInvitations(playerId) {
   const [rows] = await pool.execute(
     `SELECT pg.id, pg.pgroup_code, pg.name, pg.\`desc\`, pg.status, pg.created_by, pg.created_at,
@@ -247,9 +239,6 @@ async function getPendingInvitations(playerId) {
   return rows;
 }
 
-/**
- * 
- */
 async function respondToInvitation(id, status) {
   const numericStatus = mapMemberStatus(status);
   const [result] = await pool.execute(
@@ -259,9 +248,6 @@ async function respondToInvitation(id, status) {
   return result.affectedRows > 0;
 }
 
-/**
- * 
- */
 async function removeMember(id) {
   const [result] = await pool.execute(
     `UPDATE private_groups SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL`,

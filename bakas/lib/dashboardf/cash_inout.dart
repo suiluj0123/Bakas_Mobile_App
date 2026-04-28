@@ -1,14 +1,12 @@
 import 'dart:convert';
 import 'package:intl/intl.dart';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../dashboard.dart';
 import 'app_drawer.dart';
 import '../services/formatter.dart';
 import '../services/session_service.dart';
 import '../widgets/BakasHeader.dart';
+import '../services/api_config.dart';
 
 class CashInOutPage extends StatefulWidget {
   final int? playerId;
@@ -44,11 +42,6 @@ class _CashInOutPageState extends State<CashInOutPage> {
   bool _isStatsLoading = true;
   bool _isActionLoading = false;
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -66,7 +59,7 @@ class _CashInOutPageState extends State<CashInOutPage> {
 
     try {
       final res = await http.get(
-        Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=$effectivePlayerId'),
+        Uri.parse('${ApiConfig.baseUrl}/api/payments/stats?playerId=$effectivePlayerId'),
       );
 
       if (res.statusCode == 200) {
@@ -109,7 +102,7 @@ class _CashInOutPageState extends State<CashInOutPage> {
       return;
     }
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/wallet/$effectivePlayerId'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/settings/wallet/$effectivePlayerId'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {
@@ -166,7 +159,7 @@ class _CashInOutPageState extends State<CashInOutPage> {
     debugPrint('Processing transaction: ${_isCashIn ? 'CASH_IN' : 'CASH_OUT'} of $amount');
     try {
       final res = await http.post(
-        Uri.parse('${_apiBaseUrl()}/api/payments/transaction'),
+        Uri.parse('${ApiConfig.baseUrl}/api/payments/transaction'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'playerId': widget.playerId,

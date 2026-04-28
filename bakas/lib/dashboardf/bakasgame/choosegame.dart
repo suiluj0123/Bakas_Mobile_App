@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -10,6 +8,7 @@ import '../../widgets/WhiteContainer.dart';
 import '../../widgets/backgroundRed.dart';
 import '../../widgets/BackButton.dart';
 import '../../services/formatter.dart';
+import '../../services/api_config.dart';
 
 class chooseGamePage extends StatefulWidget {
   final String? firstName;
@@ -20,7 +19,6 @@ class chooseGamePage extends StatefulWidget {
   @override
   State<chooseGamePage> createState() => _chooseGameState();
 }
-//modal choose game public pageeeee
 Future<void> myModalPublic(BuildContext context, int? playerId, String? firstName, {String? gameName, int? drawId, int? lotteryId}) {
   return showDialog(
     context: context,
@@ -124,11 +122,6 @@ class _chooseGameState extends State<chooseGamePage> {
   Map<String, dynamic>? _drawDetails;
   bool _isLoading = true;
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -147,7 +140,7 @@ class _chooseGameState extends State<chooseGamePage> {
     }
 
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/draws/$drawId'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/draws/$drawId'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {

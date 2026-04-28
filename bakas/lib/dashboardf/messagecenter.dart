@@ -1,11 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'app_drawer.dart';
 import '../widgets/BakasHeader.dart';
+import '../services/api_config.dart';
 
 class MessageCenterPage extends StatefulWidget {
   final int? playerId;
@@ -24,11 +23,6 @@ class _MessageCenterPageState extends State<MessageCenterPage> {
   bool _isLoading = true;
   String _searchQuery = "";
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -44,7 +38,7 @@ class _MessageCenterPageState extends State<MessageCenterPage> {
 
     try {
       final res = await http.get(
-        Uri.parse('${_apiBaseUrl()}/api/messages/${widget.playerId}'),
+        Uri.parse('${ApiConfig.baseUrl}/api/messages/${widget.playerId}'),
       );
 
       if (res.statusCode == 200) {
@@ -73,7 +67,7 @@ class _MessageCenterPageState extends State<MessageCenterPage> {
       if (_selected[i]) {
         final messageId = _messages[i]['id'];
         try {
-          await http.put(Uri.parse('${_apiBaseUrl()}/api/messages/$messageId/read'));
+          await http.put(Uri.parse('${ApiConfig.baseUrl}/api/messages/$messageId/read'));
         } catch (e) {
           debugPrint('Error marking as read: $e');
         }
@@ -87,7 +81,7 @@ class _MessageCenterPageState extends State<MessageCenterPage> {
       if (_selected[i]) {
         final messageId = _messages[i]['id'];
         try {
-          await http.delete(Uri.parse('${_apiBaseUrl()}/api/messages/$messageId'));
+          await http.delete(Uri.parse('${ApiConfig.baseUrl}/api/messages/$messageId'));
         } catch (e) {
           debugPrint('Error deleting message: $e');
         }

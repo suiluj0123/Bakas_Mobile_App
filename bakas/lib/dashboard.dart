@@ -1,20 +1,11 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dashboardf/cash_inout.dart';
-import 'dashboardf/messagecenter.dart';
-import 'dashboardf/history.dart';
-import 'dashboardf/grouprequest.dart';
 import 'dashboardf/app_drawer.dart';
 import 'services/session_service.dart';
 import 'services/formatter.dart';
-import 'services/notification_service.dart';
-import 'dashboardf/notifications.dart';
 import 'widgets/BakasHeader.dart';
-
-// DashboardUI widget definition starts here
+import 'services/api_config.dart';
 
 class DashboardUI extends StatefulWidget {
   final String? firstName;
@@ -31,11 +22,6 @@ class _DashboardUIState extends State<DashboardUI> {
   bool _isLoading = true;
   bool _hasFetched = false;
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -64,7 +50,7 @@ class _DashboardUIState extends State<DashboardUI> {
       }
 
       final res = await http.get(
-        Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=$effectivePlayerId'),
+        Uri.parse('${ApiConfig.baseUrl}/api/payments/stats?playerId=$effectivePlayerId'),
       );
 
       // Balance fetch only

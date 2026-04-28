@@ -1,12 +1,11 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'app_drawer.dart';
 import '../services/session_service.dart';
 import '../widgets/BakasHeader.dart';
+import '../services/api_config.dart';
 
 class HistoryUI extends StatefulWidget {
   final int? playerId;
@@ -26,11 +25,6 @@ class _HistoryUIState extends State<HistoryUI> {
 
   final List<String> tabs = ["Cash In", "Cash Out", "Lottery"];
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -47,7 +41,7 @@ class _HistoryUIState extends State<HistoryUI> {
 
     try {
       final res = await http.get(
-        Uri.parse('${_apiBaseUrl()}/history?playerId=$effectivePlayerId'),
+        Uri.parse('${ApiConfig.baseUrl}/history?playerId=$effectivePlayerId'),
       );
 
       if (res.statusCode == 200) {

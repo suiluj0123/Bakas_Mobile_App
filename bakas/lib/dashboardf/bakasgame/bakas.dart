@@ -18,14 +18,11 @@ class BakasPage extends StatefulWidget {
 class _BakasPageState extends State<BakasPage> {
   @override
   Widget build(BuildContext context) {
-    //invoked background red hehehe
     return backgroundRed( 
       child: Scaffold(
         backgroundColor: Colors.transparent,
         extendBodyBehindAppBar: true,
-        //app bar widget file ito
         appBar: myAppBar('Bakas'),
-        //drawer widget file i2
         drawer: AppDrawer(
           firstName: widget.firstName ?? SessionService().firstName,
           playerId: widget.playerId ?? SessionService().playerId,

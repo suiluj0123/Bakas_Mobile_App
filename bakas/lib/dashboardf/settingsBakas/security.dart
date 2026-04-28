@@ -7,6 +7,7 @@ import '../app_drawer.dart';
 import '/widgets/BakasHeader.dart';
 import '/widgets/WhiteContainer.dart';
 import '/widgets/backgroundRed.dart';
+import '../../services/api_config.dart';
 
 class securityPage extends StatefulWidget {
   final String? firstName;
@@ -31,11 +32,6 @@ class _securityPageState extends State<securityPage> {
     super.dispose();
   }
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   Future<void> _changePassword() async {
     if (widget.playerId == null) return;
@@ -59,7 +55,7 @@ class _securityPageState extends State<securityPage> {
     try {
       // 1. Check old password
       final checkRes = await http.post(
-        Uri.parse('${_apiBaseUrl()}/api/settings/checkPassword'),
+        Uri.parse('${ApiConfig.baseUrl}/api/settings/checkPassword'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'playerId': widget.playerId,
@@ -76,7 +72,7 @@ class _securityPageState extends State<securityPage> {
 
       // 2. Update password
       final updateRes = await http.put(
-        Uri.parse('${_apiBaseUrl()}/api/settings/changePassword'),
+        Uri.parse('${ApiConfig.baseUrl}/api/settings/changePassword'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'playerId': widget.playerId,
@@ -112,89 +108,93 @@ class _securityPageState extends State<securityPage> {
         ),
         body: SafeArea(
           bottom: false,
-          child: WhiteContainer(
-            child: Padding(
-              padding: const EdgeInsets.all(15.0),
-              child: Column(
-                children: [
-                  Row(
+          child: Column(
+            children: [
+              WhiteContainer(
+                child: Padding(
+                  padding: const EdgeInsets.all(15.0),
+                  child: Column(
                     children: [
-                      _navButton('Profile', '/setting'),
-                      _navButton('Wallet', '/wallet'),
-                      _navButton('Security', '/security'),
+                      Row(
+                        children: [
+                          _navButton('Profile', '/setting'),
+                          _navButton('Wallet', '/wallet'),
+                          _navButton('Security', '/security'),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(25),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Center(
+                              child: Text(
+                                "Change Password",
+                                style: TextStyle(
+                                  color: Color(0xFF8B0000),
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 25),
+                            securityInput("Old Password", _oldPasswordController),
+                            const SizedBox(height: 15),
+                            securityInput("New Password", _newPasswordController),
+                            const SizedBox(height: 15),
+                            securityInput("Confirm Password", _confirmPasswordController),
+                            const SizedBox(height: 25),
+                            Align(
+                              alignment: Alignment.bottomRight,
+                              child: SizedBox(
+                                width: 120,
+                                height: 38,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _changePassword,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF00C853),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                        )
+                                      : const Text(
+                                          "Save",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 30),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(25),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Center(
-                          child: Text(
-                            "Change Password",
-                            style: TextStyle(
-                              color: Color(0xFF8B0000),
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 25),
-                        securityInput("Old Password", _oldPasswordController),
-                        const SizedBox(height: 15),
-                        securityInput("New Password", _newPasswordController),
-                        const SizedBox(height: 15),
-                        securityInput("Confirm Password", _confirmPasswordController),
-                        const SizedBox(height: 25),
-                        Align(
-                          alignment: Alignment.bottomRight,
-                          child: SizedBox(
-                            width: 120,
-                            height: 38,
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _changePassword,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF00C853),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                    )
-                                  : const Text(
-                                      "Save",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),

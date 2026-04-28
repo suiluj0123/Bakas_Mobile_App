@@ -1,14 +1,13 @@
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../services/formatter.dart';
 import '../services/session_service.dart';
 import '../services/notification_service.dart';
 import '../dashboardf/notifications.dart';
+import '../services/api_config.dart';
 
-//pref size widget sa appbar not widget ah
 PreferredSizeWidget myAppBar(String? title, {int? playerId, String? firstName}) {
   return AppBar(
     title: Text(
@@ -38,7 +37,6 @@ PreferredSizeWidget myAppBar(String? title, {int? playerId, String? firstName}) 
 
 class myDrawer extends StatelessWidget {
   const myDrawer({super.key});
-  //drawer widget hahaha
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -111,11 +109,6 @@ class _PlayerBalanceWidgetState extends State<PlayerBalanceWidget> {
   double _balance = 0.0;
   bool _isLoading = true;
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -137,7 +130,7 @@ class _PlayerBalanceWidgetState extends State<PlayerBalanceWidget> {
       return;
     }
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/payments/stats?playerId=$effectivePlayerId'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/payments/stats?playerId=$effectivePlayerId'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true && payload['data'] != null) {

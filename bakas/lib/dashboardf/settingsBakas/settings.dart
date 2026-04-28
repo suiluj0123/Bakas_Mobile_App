@@ -1,15 +1,14 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import '../app_drawer.dart';
-import '../../services/formatter.dart';
 import '/widgets/WhiteContainer.dart';
 import '/widgets/backgroundRed.dart';
 import '/widgets/BakasHeader.dart';
+import '../../services/api_config.dart';
 
 class settingPage extends StatefulWidget {
   final String? firstName;
@@ -52,7 +51,7 @@ class _settingPageState extends State<settingPage> {
 
   Future<void> _fetchRegions() async {
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/regions'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/settings/regions'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (mounted) setState(() => _regions = payload['data'] ?? []);
@@ -71,7 +70,7 @@ class _settingPageState extends State<settingPage> {
 
   Future<void> _fetchProvinces(String regionCode) async {
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/provinces/$regionCode'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/settings/provinces/$regionCode'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         setState(() {
@@ -90,7 +89,7 @@ class _settingPageState extends State<settingPage> {
 
   Future<void> _fetchCities(String provinceCode) async {
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/cities/$provinceCode'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/settings/cities/$provinceCode'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         setState(() {
@@ -107,7 +106,7 @@ class _settingPageState extends State<settingPage> {
 
   Future<void> _fetchBarangays(String cityCode) async {
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/barangays/$cityCode'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/settings/barangays/$cityCode'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         setState(() {
@@ -130,11 +129,6 @@ class _settingPageState extends State<settingPage> {
   final _idTypeController = TextEditingController();
   final _idNumberController = TextEditingController();
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -265,7 +259,7 @@ class _settingPageState extends State<settingPage> {
        return;
     }
     try {
-      final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/settings/profile/${widget.playerId}'));
+      final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/settings/profile/${widget.playerId}'));
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
         if (payload['ok'] == true) {
@@ -303,7 +297,7 @@ class _settingPageState extends State<settingPage> {
 
   Future<void> _updateProfile() async {
     try {
-      final uri = Uri.parse('${_apiBaseUrl()}/api/settings/profileUpdate');
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/settings/profileUpdate');
       final request = http.MultipartRequest('PUT', uri);
 
       // Text fields
@@ -600,105 +594,109 @@ class _settingPageState extends State<settingPage> {
         ),
         body: SafeArea(
           bottom: false,
-          child: WhiteContainer(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : Padding(
-                    padding: const EdgeInsets.all(15.0),
-                    child: Column(
-                      children: [
-                        Row(
+          child: Column(
+            children: [
+              WhiteContainer(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : Padding(
+                        padding: const EdgeInsets.all(15.0),
+                        child: Column(
                           children: [
-                            _navButton('Profile', '/setting'),
-                            _navButton('Wallet', '/wallet'),
-                            _navButton('Security', '/security'),
+                            Row(
+                              children: [
+                                _navButton('Profile', '/setting'),
+                                _navButton('Wallet', '/wallet'),
+                                _navButton('Security', '/security'),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFFD66D6D), Color(0xFF912A2A)],
+                                ),
+                                borderRadius: BorderRadius.circular(35),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Align(
+                                    alignment: Alignment.topRight,
+                                    child: InkWell(
+                                      onTap: () => showModalProfile(context),
+                                      child: const Icon(
+                                        Icons.edit_document,
+                                        color: Colors.white70,
+                                        size: 22,
+                                      ),
+                                    ),
+                                  ),
+                                  CircleAvatar(
+                                    radius: 52,
+                                    backgroundColor: const Color(0xFFFFD152),
+                                    child: CircleAvatar(
+                                      radius: 48,
+                                      backgroundColor: Colors.white24,
+                                      backgroundImage: (_profileData?['picture'] != null && _profileData!['picture'].isNotEmpty)
+                                          ? NetworkImage(_profileData!['picture'])
+                                          : null,
+                                      child: (_profileData?['picture'] == null || _profileData!['picture'].isEmpty)
+                                          ? const Icon(Icons.person, size: 50, color: Colors.white)
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    "${_profileData?['first_name'] ?? ''} ${_profileData?['last_name'] ?? ''}".trim().isEmpty 
+                                       ? (widget.firstName ?? "User") 
+                                       : "${_profileData?['first_name'] ?? ''} ${_profileData?['last_name'] ?? ''}",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 15),
+                                    child: Divider(color: Colors.white24, height: 1),
+                                  ),
+                                  if ((_profileData?['contact_num'] ?? "").isNotEmpty)
+                                    infoRow("Mobile Number", _profileData?['contact_num'] ?? ""),
+                                  if ((_profileData?['email'] ?? "").isNotEmpty)
+                                    infoRow("Email", _profileData?['email'] ?? ""),
+                                  if ((_profileData?['region_code'] ?? "").isNotEmpty)
+                                    infoRow("Region", _getNameByCode(_regions, _profileData?['region_code'])),
+                                  if ((_profileData?['provincial_code'] ?? "").isNotEmpty)
+                                    infoRow("Province", _getNameByCode(_provinces, _profileData?['provincial_code'])),
+                                  if ((_profileData?['city_code'] ?? "").isNotEmpty)
+                                    infoRow("City", _getNameByCode(_cities, _profileData?['city_code'])),
+                                  if ((_profileData?['barangay_code'] ?? "").isNotEmpty)
+                                    infoRow("Barangay", _getNameByCode(_barangays, _profileData?['barangay_code'])),
+                                  if ((_profileData?['address'] ?? "").isNotEmpty)
+                                    infoRow("Address", _profileData?['address'] ?? ""),
+                                  if ((_profileData?['id_code'] ?? "").isNotEmpty)
+                                    infoRow("ID Type", _profileData?['id_code'] ?? ""),
+                                  if ((_profileData?['id_number'] ?? "").isNotEmpty)
+                                    infoRow("ID Number", _profileData?['id_number'] ?? ""),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFFD66D6D), Color(0xFF912A2A)],
-                            ),
-                            borderRadius: BorderRadius.circular(35),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              Align(
-                                alignment: Alignment.topRight,
-                                child: InkWell(
-                                  onTap: () => showModalProfile(context),
-                                  child: const Icon(
-                                    Icons.edit_document,
-                                    color: Colors.white70,
-                                    size: 22,
-                                  ),
-                                ),
-                              ),
-                              CircleAvatar(
-                                radius: 52,
-                                backgroundColor: const Color(0xFFFFD152),
-                                child: CircleAvatar(
-                                  radius: 48,
-                                  backgroundColor: Colors.white24,
-                                  backgroundImage: (_profileData?['picture'] != null && _profileData!['picture'].isNotEmpty)
-                                      ? NetworkImage(_profileData!['picture'])
-                                      : null,
-                                  child: (_profileData?['picture'] == null || _profileData!['picture'].isEmpty)
-                                      ? const Icon(Icons.person, size: 50, color: Colors.white)
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                "${_profileData?['first_name'] ?? ''} ${_profileData?['last_name'] ?? ''}".trim().isEmpty 
-                                   ? (widget.firstName ?? "User") 
-                                   : "${_profileData?['first_name'] ?? ''} ${_profileData?['last_name'] ?? ''}",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 15),
-                                child: Divider(color: Colors.white24, height: 1),
-                              ),
-                              if ((_profileData?['contact_num'] ?? "").isNotEmpty)
-                                infoRow("Mobile Number", _profileData?['contact_num'] ?? ""),
-                              if ((_profileData?['email'] ?? "").isNotEmpty)
-                                infoRow("Email", _profileData?['email'] ?? ""),
-                              if ((_profileData?['region_code'] ?? "").isNotEmpty)
-                                infoRow("Region", _getNameByCode(_regions, _profileData?['region_code'])),
-                              if ((_profileData?['provincial_code'] ?? "").isNotEmpty)
-                                infoRow("Province", _getNameByCode(_provinces, _profileData?['provincial_code'])),
-                              if ((_profileData?['city_code'] ?? "").isNotEmpty)
-                                infoRow("City", _getNameByCode(_cities, _profileData?['city_code'])),
-                              if ((_profileData?['barangay_code'] ?? "").isNotEmpty)
-                                infoRow("Barangay", _getNameByCode(_barangays, _profileData?['barangay_code'])),
-                              if ((_profileData?['address'] ?? "").isNotEmpty)
-                                infoRow("Address", _profileData?['address'] ?? ""),
-                              if ((_profileData?['id_code'] ?? "").isNotEmpty)
-                                infoRow("ID Type", _profileData?['id_code'] ?? ""),
-                              if ((_profileData?['id_number'] ?? "").isNotEmpty)
-                                infoRow("ID Number", _profileData?['id_number'] ?? ""),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
+              ),
+            ],
           ),
         ),
       ),

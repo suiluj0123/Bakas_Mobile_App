@@ -1,11 +1,9 @@
 import 'dart:convert';
-import 'dart:io' hide File;
-import 'dart:io' as io;
-import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'services/api_config.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'services/id_validation_service.dart';
@@ -46,11 +44,6 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
     'Senior Citizen ID',
   ];
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   Future<void> _handleRegister() async {
     setState(() {
@@ -118,17 +111,6 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
         });
         return;
       }
-      
-      // ID validation bypass: We no longer block registration based on validationResult
-      /*
-      if (_validationResult == null || !_validationResult!.isValid) {
-        setState(() {
-          _errorText = _validationResult?.message ?? 'ID validation failed.';
-          _isLoading = false;
-        });
-        return;
-      }
-      */
 
       if (!em.contains('@')) {
         setState(() {
@@ -137,10 +119,9 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
         });
         return;
       }
-        final uri = Uri.parse('${_apiBaseUrl()}/register');
+        final uri = Uri.parse('${ApiConfig.baseUrl}/register');
         final request = http.MultipartRequest('POST', uri);
-        
-        // Add text fields
+
         request.fields['first_name'] = fn;
         request.fields['last_name'] = ln;
         request.fields['email'] = em;
@@ -148,9 +129,7 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
         request.fields['password'] = pw;
         request.fields['id_code'] = _selectedIdType ?? 'PH Government ID';
 
-        // Add ID photo file
         if (_idBytes != null && _idXFile != null) {
-          // Determine content type based on extension
           final fileName = _idXFile!.name.toLowerCase();
           MediaType contentType;
           if (fileName.endsWith('.png')) {
@@ -158,7 +137,7 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
           } else if (fileName.endsWith('.webp')) {
             contentType = MediaType('image', 'webp');
           } else {
-            contentType = MediaType('image', 'jpeg'); // Default to jpeg for jpg/jpeg
+            contentType = MediaType('image', 'jpeg'); 
           }
 
           final multipartFile = http.MultipartFile.fromBytes(
@@ -170,7 +149,6 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
           request.files.add(multipartFile);
         }
 
-        // Add Selfie photo file
         if (_selfieBytes != null && _selfieXFile != null) {
           final fileName = _selfieXFile!.name.toLowerCase();
           MediaType contentType;
@@ -248,30 +226,13 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
         });
 
         final bytes = await pickedFile.readAsBytes();
-        
-        // Use a temporary file for ML Kit if NOT on web
-        // ML Kit requires a File on Android/iOS
-        // ID validation bypass: Mark any photo as valid for now
+ 
         IdValidationResult result = IdValidationResult(
           isValid: true, 
           message: "ID uploaded successfully",
           idType: _selectedIdType ?? "PH Government ID"
         );
-        /* 
-        IdValidationResult result;
-        if (!kIsWeb) {
-          final file = io.File(pickedFile.path);
-          result = await _idValidationService.validatePhId(file, selectedType: _selectedIdType);
-        } else {
-          // For Web, we might need a different approach for validation
-          // or just skip client-side OCR if not supported on web yet
-          result = IdValidationResult(
-            isValid: true, 
-            message: "ID uploaded successfully (Web validation pending server check)",
-            idType: "PH Government ID"
-          );
-        }
-        */
+     
 
         setState(() {
           _idXFile = pickedFile;
@@ -396,7 +357,6 @@ class _GlassRegisterUIState extends State<GlassRegisterUI> {
     );
 
     if (picked != null) {
-      // keep format as YYYY-MM-DD for backend DATE column
       _birthdateController.text = picked.toIso8601String().split('T').first;
       setState(() {});
     }

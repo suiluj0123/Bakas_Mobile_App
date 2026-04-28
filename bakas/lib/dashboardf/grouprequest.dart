@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'app_drawer.dart';
+import '../services/api_config.dart';
 
 class GroupRequestPage extends StatefulWidget {
   final int? playerId;
@@ -20,11 +19,6 @@ class _GroupRequestPageState extends State<GroupRequestPage> {
   List<dynamic> _invitations = [];
   bool _isLoading = true;
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -39,7 +33,7 @@ class _GroupRequestPageState extends State<GroupRequestPage> {
     }
     try {
       final res = await http.get(
-        Uri.parse('${_apiBaseUrl()}/api/groups/invitations/${widget.playerId}'),
+        Uri.parse('${ApiConfig.baseUrl}/api/groups/invitations/${widget.playerId}'),
       );
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
@@ -62,7 +56,7 @@ class _GroupRequestPageState extends State<GroupRequestPage> {
   Future<void> _respondToInvitation(int id, String status) async {
     try {
       final res = await http.put(
-        Uri.parse('${_apiBaseUrl()}/api/groups/invitations/$id/respond'),
+        Uri.parse('${ApiConfig.baseUrl}/api/groups/invitations/$id/respond'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'status': status}),
       );

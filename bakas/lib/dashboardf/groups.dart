@@ -1,11 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'app_drawer.dart';
 import '../widgets/BakasHeader.dart';
+import '../services/api_config.dart';
 
 class GroupsPage extends StatefulWidget {
   final int? playerId;
@@ -24,11 +23,6 @@ class _GroupsPageState extends State<GroupsPage> {
   bool _isLoading = true;
   int _activeTab = 0; // 0: Public, 1: Private (My Groups)
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -46,12 +40,12 @@ class _GroupsPageState extends State<GroupsPage> {
     try {
       // Fetch My Groups
       final myRes = await http.get(
-        Uri.parse('${_apiBaseUrl()}/api/groups/my/${widget.playerId}'),
+        Uri.parse('${ApiConfig.baseUrl}/api/groups/my/${widget.playerId}'),
       );
       
       // Fetch Public Groups
       final pubRes = await http.get(
-        Uri.parse('${_apiBaseUrl()}/api/groups/public'),
+        Uri.parse('${ApiConfig.baseUrl}/api/groups/public'),
       );
 
       if (mounted) {
@@ -74,7 +68,7 @@ class _GroupsPageState extends State<GroupsPage> {
   Future<bool> _createGroup(String name, String desc, String status, String groupType) async {
     try {
       final res = await http.post(
-        Uri.parse('${_apiBaseUrl()}/api/groups'),
+        Uri.parse('${ApiConfig.baseUrl}/api/groups'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'name': name,
@@ -109,7 +103,7 @@ class _GroupsPageState extends State<GroupsPage> {
   Future<bool> _joinByCode(String code) async {
     try {
       final res = await http.post(
-        Uri.parse('${_apiBaseUrl()}/api/groups/join-code'),
+        Uri.parse('${ApiConfig.baseUrl}/api/groups/join-code'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'code': code,
@@ -135,7 +129,7 @@ class _GroupsPageState extends State<GroupsPage> {
   Future<bool> _updateGroup(int id, String name, String desc, String status) async {
     try {
       final res = await http.put(
-        Uri.parse('${_apiBaseUrl()}/api/groups/$id'),
+        Uri.parse('${ApiConfig.baseUrl}/api/groups/$id'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'name': name, 'desc': desc, 'status': status}),
       );
@@ -152,7 +146,7 @@ class _GroupsPageState extends State<GroupsPage> {
   Future<bool> _deleteGroup(int id) async {
     try {
       final res = await http.delete(
-        Uri.parse('${_apiBaseUrl()}/api/groups/$id'),
+        Uri.parse('${ApiConfig.baseUrl}/api/groups/$id'),
       );
       if (res.statusCode == 200) {
         await _fetchGroups();
@@ -167,7 +161,7 @@ class _GroupsPageState extends State<GroupsPage> {
   Future<List<dynamic>> _fetchMembers(int groupId) async {
     try {
       final res = await http.get(
-        Uri.parse('${_apiBaseUrl()}/api/groups/$groupId/members'),
+        Uri.parse('${ApiConfig.baseUrl}/api/groups/$groupId/members'),
       );
       if (res.statusCode == 200) {
         final payload = jsonDecode(res.body);
@@ -182,7 +176,7 @@ class _GroupsPageState extends State<GroupsPage> {
   Future<bool> _invitePlayer(int groupId, int targetPlayerId) async {
     try {
       final res = await http.post(
-        Uri.parse('${_apiBaseUrl()}/api/groups/$groupId/invite'),
+        Uri.parse('${ApiConfig.baseUrl}/api/groups/$groupId/invite'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'player_id': targetPlayerId,
@@ -537,7 +531,7 @@ class _GroupsPageState extends State<GroupsPage> {
                       if (searchController.text.isEmpty) return;
                       setStateDialog(() => isSearching = true);
                       try {
-                        final res = await http.get(Uri.parse('${_apiBaseUrl()}/api/players/search?q=${searchController.text}'));
+                        final res = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/players/search?q=${searchController.text}'));
                         if (res.statusCode == 200) {
                           final payload = jsonDecode(res.body);
                           setStateDialog(() {

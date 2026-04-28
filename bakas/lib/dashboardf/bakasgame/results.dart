@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../services/formatter.dart';
 import '../../widgets/BakasHeader.dart';
-import '../../services/session_service.dart';
+import '../../services/api_config.dart';
 import '../../widgets/WhiteContainer.dart';
 import '../../widgets/backgroundRed.dart';
 
@@ -23,11 +21,6 @@ class _ResultsUIState extends State<ResultsUI> {
   List<dynamic> _results = [];
   bool _isLoading = true;
 
-  String _apiBaseUrl() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
 
   @override
   void initState() {
@@ -38,7 +31,7 @@ class _ResultsUIState extends State<ResultsUI> {
   Future<void> _fetchResults() async {
     setState(() => _isLoading = true);
     try {
-      final response = await http.get(Uri.parse('${_apiBaseUrl()}/api/draws/results'));
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/api/draws/results'));
       if (response.statusCode == 200) {
         setState(() {
           _results = jsonDecode(response.body)['data'];

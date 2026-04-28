@@ -12,7 +12,6 @@ const { profileUpdate,
     getBarangays
 } = require('../models/settingModel');
 
-//profile controller
 async function userInfoUpdate(req, res) {
     try {
         const data = { ...req.body };
@@ -47,7 +46,6 @@ async function userInfoUpdate(req, res) {
         })
 
     } catch (err) {
-        console.error('[PROFILE UPDATE ERROR]:', err);
         return res.status(500).json({ ok: false, message: err?.message || 'Server error' });
     }
 }
@@ -57,13 +55,11 @@ async function getUserInfo(req, res) {
         const { playerId } = req.params;
 
         if (!playerId) {
-            console.log('playerId not found');
             return res.status(400).json({ ok: false, message: 'playerId is required' });
         }
 
         const userData = await userInfo(playerId);
         if (!userData) {
-            console.log('userdata not found');
             return res.status(404).json({ ok: false, message: 'User not found' });
         }
 
@@ -77,7 +73,6 @@ async function getUserInfo(req, res) {
     }
 }
 
-//wallet controller
 async function getWallet(req, res) {
     try {
         const { playerId } = req.params;
@@ -102,7 +97,6 @@ async function getWallet(req, res) {
         })
 
     } catch (err) {
-        console.log(err);
         return res.status(500).json({ ok: false, message: err?.message || 'Server error' });
     }
 }
@@ -125,7 +119,6 @@ async function addWallet(req, res) {
             data: wallet
         })
     } catch (err) {
-        console.log(err);
         return res.status(500).json({ ok: false, message: err?.message || 'Server error' });
     }
 }
@@ -152,12 +145,10 @@ async function editWallet(req, res) {
             data: wallet
         })
     } catch (err) {
-        console.log(err);
         return res.status(500).json({ ok: false, message: err?.message || 'Server error' });
     }
 }
 
-//Security
 async function checkPassword(req, res) {
     try {
         const { password, playerId } = req.body;
@@ -187,7 +178,6 @@ async function checkPassword(req, res) {
         })
 
     } catch (err) {
-        console.log(err);
         return res.status(500).json({ ok: false, message: err?.message || 'Server error' });
     }
 }
@@ -211,55 +201,46 @@ async function changePassword(req, res) {
         })
 
     } catch (err) {
-        console.log(err);
         return res.status(500).json({ ok: false, message: err?.message || 'Server error' });
     }
 }
 
 // Locations
 async function getRegionsList(req, res) {
-    console.log('GET /api/settings/regions');
     try {
         const data = await getRegions();
         return res.status(200).json({ ok: true, data });
     } catch (err) {
-        console.error('Error fetching regions:', err.message);
         return res.status(500).json({ ok: false, message: err.message });
     }
 }
 
 async function getProvincesList(req, res) {
     const { regionCode } = req.params;
-    console.log('GET /api/settings/provinces/' + regionCode);
     try {
         const data = await getProvinces(regionCode);
         return res.status(200).json({ ok: true, data });
     } catch (err) {
-        console.error('Error fetching provinces:', err.message);
         return res.status(500).json({ ok: false, message: err.message });
     }
 }
 
 async function getCitiesList(req, res) {
     const { provinceCode } = req.params;
-    console.log('GET /api/settings/cities/' + provinceCode);
     try {
         const data = await getCities(provinceCode);
         return res.status(200).json({ ok: true, data });
     } catch (err) {
-        console.error('Error fetching cities:', err.message);
         return res.status(500).json({ ok: false, message: err.message });
     }
 }
 
 async function getBarangaysList(req, res) {
     const { cityCode } = req.params;
-    console.log('GET /api/settings/barangays/' + cityCode);
     try {
         const data = await getBarangays(cityCode);
         return res.status(200).json({ ok: true, data });
     } catch (err) {
-        console.error('Error fetching barangays:', err.message);
         return res.status(500).json({ ok: false, message: err.message });
     }
 }
